@@ -5,5 +5,10 @@
 	<!-- Shows the library in the Files app ("On My iPad › Noty"), see ADR-0005. -->
 	<key>UIFileSharingEnabled</key>
 	<true/>
+	<!-- Lectures keep recording with the iPad locked (ADR-0010). -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 </dict>
 </plist>

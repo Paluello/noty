@@ -17,6 +17,9 @@ Nome.noty/
 ├── pages/<uuid>.json            (caselle di testo e immagini della pagina, se ci sono)
 ├── assets/cover-xxxxxxxx.jpg    (solo se la copertina è un'immagine)
 ├── assets/image-<uuid>.jpg      (immagini inserite nelle pagine)
+├── audio/<uuid>/recording.json  (una cartella per registrazione)
+├── audio/<uuid>/000.m4a, 001.m4a…  (AAC mono, un file per minuto)
+├── text-index.json              (testo riconosciuto nelle pagine, per la ricerca)
 └── snapshot.pdf                 (copia PDF, rigenerata alla chiusura)
 ```
 
@@ -62,6 +65,19 @@ Caselle di testo e immagini della pagina, disegnate **sotto** l'inchiostro (ADR-
     "content" : { "image" : { "fileName" : "image-1B2C….jpg" } } }
 ]
 ```
+
+### `audio/<uuid>/recording.json`
+```json
+{ "id" : "749B…", "startDate" : "2026-10-09T13:39:16.250Z",
+  "segments" : [ { "fileName" : "000.m4a", "startDate" : "2026-10-09T13:39:24.012Z", "duration" : 33.247 } ] }
+```
+Ogni segmento è un file audio; tra un segmento e l'altro può esserci una pausa. Il momento in cui è stato scritto un tratto (`PKStroke.path.creationDate`) si confronta con questi orari per sincronizzare audio e appunti.
+
+### `text-index.json`
+```json
+{ "pages" : { "2C00BA40-…" : { "text" : "Appunti di prova…", "pageModifiedAt" : "2026-10-09T13:22:23Z" } } }
+```
+Testo riconosciuto da Vision per ogni pagina non vuota (ADR-0019). Non esiste per i quaderni bloccati.
 
 ### `snapshot.pdf`
 Un PDF A4 con tutte le pagine (sfondo, testo, immagini e tratti), rigenerato quando chiudi il quaderno. Non esiste per i quaderni bloccati. Serve a leggere le note ovunque, anche senza Noty.

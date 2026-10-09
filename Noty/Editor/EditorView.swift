@@ -8,6 +8,18 @@ struct EditorView: View {
     let package: NotebookPackage
     /// Closes the editor; by default it dismisses the full-screen cover.
     var onClose: (() -> Void)?
+    /// Page to open at, e.g. from a search result.
+    var initialPage: Int?
+
+    @State private var audio: NotebookAudio
+    @State private var isShowingMicrophoneAlert = false
+
+    init(package: NotebookPackage, onClose: (() -> Void)? = nil, initialPage: Int? = nil) {
+        self.package = package
+        self.onClose = onClose
+        self.initialPage = initialPage
+        _audio = State(initialValue: NotebookAudio(package: package))
+    }
 
     @Environment(\.dismiss) private var dismiss
     @Environment(LibraryStore.self) private var store
@@ -54,6 +66,19 @@ struct EditorView: View {
                 pageIndicator
             }
         }
+        .overlay(alignment: .bottom) {
+            if audio.isBusy {
+                AudioBar(audio: audio)
+                    .padding(.bottom, 20)
+            }
+        }
+        .animation(.snappy, value: audio.isBusy)
+        .onChange(of: audio.playbackDate) { _, date in model.playbackDate = date }
+        .alert("Microphone Access", isPresented: $isShowingMicrophoneAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("To record, allow Noty to use the microphone in the iPad's Settings › Apps › Noty.")
+        }
         .overlay {
             if isLocked && !isUnlocked {
                 ZStack {
@@ -82,6 +107,8 @@ struct EditorView: View {
         .onChange(of: model.widthPresets) { EditorPreferences.save(from: model) }
         .onChange(of: model.revision) { title = (try? package.readManifest().title) ?? title }
         .onAppear {
+            model.initialPage = initialPage
+            model.onSeek = { [audio] date in audio.seek(toDate: date) }
             EditorPreferences.load(into: model)
             title = (try? package.readManifest().title) ?? ""
             store.openNotebooks.insert(Library.normalized(package.url))
@@ -196,7 +223,9 @@ struct EditorView: View {
             onExport: exportPDF,
             onFocusMode: { isFocusMode = true },
             onInsertImage: { imageSource = $0 },
-            onShowPaper: { isShowingPaper = true }
+            onShowPaper: { isShowingPaper = true },
+            audio: audio,
+            onRecord: startRecording
         )
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { toolbarFrame = $0 }
     }
@@ -258,6 +287,20 @@ struct EditorView: View {
         .accessibilityValue(Text(verbatim: "\(model.currentPage) / \(model.pageCount)"))
     }
 
+    private func startRecording() {
+        Task {
+            guard await audio.requestPermission() else {
+                isShowingMicrophoneAlert = true
+                return
+            }
+            do {
+                try audio.startRecording()
+            } catch {
+                isShowingMicrophoneAlert = true
+            }
+        }
+    }
+
     private func showPages() {
         model.save()
         isShowingPages = true
@@ -265,10 +308,12 @@ struct EditorView: View {
 
     private func exportPDF() {
         model.save()
-        sharedPDF = (try? PageRenderer.exportPDFForSharing(of: package)).map(SharedFile.init(url:))
+        sharedPDF = (try? PageRenderer.exportPDFForSharing(of: package)).map { SharedFile(url: $0) }
     }
 
     private func close() {
+        audio.stopRecording()
+        audio.stopPlayback()
         model.save()
         let package = package
         // Keep a PDF copy inside the notebook, readable without Noty (ADR-0004),
@@ -276,6 +321,8 @@ struct EditorView: View {
         if (try? package.readManifest().isLocked) != true {
             Task.detached(priority: .utility) {
                 try? PageRenderer.exportPDF(of: package, to: package.snapshotURL)
+                // Read the handwriting of changed pages, for search (ORG-8).
+                try? await TextIndexer.update(package)
             }
         }
         if let onClose {
@@ -305,6 +352,8 @@ struct EditorToolbar: View {
     let onFocusMode: () -> Void
     let onInsertImage: (ImageSource) -> Void
     let onShowPaper: () -> Void
+    let audio: NotebookAudio
+    let onRecord: () -> Void
 
     @Environment(PaletteStore.self) private var palettes
     @State private var optionsTool: ToolKind?
@@ -319,7 +368,7 @@ struct EditorToolbar: View {
 
     var body: some View {
         GlassEffectContainer(spacing: 16) {
-            stack(spacing: 12).callAsFunction {
+            stack(spacing: 8).callAsFunction {
                 Button("Library", systemImage: "chevron.left", action: onClose)
                     .labelStyle(.iconOnly)
                     .frame(width: 48, height: 48)
@@ -359,6 +408,16 @@ struct EditorToolbar: View {
                 Label("Insert Image", systemImage: "photo.badge.plus")
             }
             Button("Paper", systemImage: "doc.richtext", action: onShowPaper)
+            Divider()
+            Button("Record Audio", systemImage: "mic", action: onRecord)
+                .disabled(audio.isRecording)
+            if !audio.recordings.isEmpty {
+                Menu {
+                    RecordingsMenu(audio: audio)
+                } label: {
+                    Label("Recordings", systemImage: "waveform")
+                }
+            }
             Divider()
             Button("Palettes", systemImage: "paintpalette", action: onShowPalettes)
             Picker(selection: $position) {

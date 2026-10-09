@@ -26,3 +26,4 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0016](0016-iphone-viewer.md) | iPhone solo in consultazione, nello stesso progetto | Accettato |
 | [0017](0017-preferiti-recenti-per-id.md) | Preferiti e recenti riferiti all'id del quaderno | Accettato |
 | [0018](0018-sync-cartella-scelta.md) | Sincronizzazione tramite una cartella scelta dall'utente | Accettato |
+| [0019](0019-ricerca-scrittura-vision.md) | Ricerca nella scrittura a mano con Vision, sul dispositivo | Accettato |

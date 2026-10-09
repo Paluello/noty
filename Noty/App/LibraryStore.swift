@@ -138,6 +138,7 @@ final class LibraryStore {
             // No readable PDF copy of a locked notebook (ADR-0012).
             if isLocked {
                 try? FileManager.default.removeItem(at: package.snapshotURL)
+                package.deleteTextIndex()
             }
         }
     }
@@ -163,6 +164,25 @@ final class LibraryStore {
     func search(_ query: String, sortedBy order: SortOrder) -> [LibraryEntry] {
         _ = revision
         return sorted(library.search(query), by: order)
+    }
+
+    /// Notebooks whose handwriting matches, with the matching pages (ORG-8).
+    func searchHandwriting(_ query: String) -> [(entry: LibraryEntry, pages: [Int])] {
+        _ = revision
+        return library.searchHandwriting(query)
+    }
+
+    /// Reads the handwriting of pages changed since the last time, one notebook
+    /// at a time, so search finds it. Cheap when nothing changed.
+    func indexHandwritingInBackground() async {
+        let library = library
+        await Task.detached(priority: .background) {
+            for entry in library.allEntries() {
+                guard case .notebook(let url, let manifest) = entry, !manifest.isLocked else { continue }
+                try? await TextIndexer.update(NotebookPackage(url: url))
+            }
+        }.value
+        revision += 1
     }
 
     func isFavorite(_ entry: LibraryEntry) -> Bool {

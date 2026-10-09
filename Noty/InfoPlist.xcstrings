@@ -11,6 +11,17 @@
           }
         }
       }
+    },
+    "NSMicrophoneUsageDescription": {
+      "comment": "Privacy - Microphone Usage Description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noty registra le lezioni per riascoltarle insieme ai tuoi appunti."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

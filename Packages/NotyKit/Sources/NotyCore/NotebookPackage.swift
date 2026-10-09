@@ -87,6 +87,83 @@ public struct NotebookPackage: Sendable {
         }
     }
 
+    // MARK: - Audio (ADR-0010)
+
+    var audioURL: URL { url.appending(path: "audio", directoryHint: .isDirectory) }
+
+    /// Folder of a recording's segments; created if needed.
+    public func recordingFolder(_ id: UUID) throws -> URL {
+        let folder = audioURL.appending(path: id.uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder
+    }
+
+    /// Recordings keep milliseconds: ink and audio must line up precisely (AUD-2).
+    private static let preciseDateStyle = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+
+    public func writeRecording(_ recording: Recording) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(date.formatted(Self.preciseDateStyle))
+        }
+        try encoder.encode(recording).write(to: recordingFolder(recording.id).appending(path: "recording.json"), options: .atomic)
+    }
+
+    /// All recordings, oldest first.
+    public func readRecordings() -> [Recording] {
+        let folders = (try? FileManager.default.contentsOfDirectory(at: audioURL, includingPropertiesForKeys: nil)) ?? []
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let string = try decoder.singleValueContainer().decode(String.self)
+            if let date = try? Self.preciseDateStyle.parse(string) {
+                return date
+            }
+            return try Date.ISO8601FormatStyle().parse(string)
+        }
+        return folders
+            .compactMap { try? decoder.decode(Recording.self, from: Data(contentsOf: $0.appending(path: "recording.json"))) }
+            .sorted { $0.startDate < $1.startDate }
+    }
+
+    public func segmentURL(_ segment: Recording.Segment, of recording: Recording) -> URL {
+        audioURL.appending(path: recording.id.uuidString, directoryHint: .isDirectory).appending(path: segment.fileName)
+    }
+
+    public func deleteRecording(_ id: UUID) throws {
+        try FileManager.default.removeItem(at: audioURL.appending(path: id.uuidString, directoryHint: .isDirectory))
+    }
+
+    // MARK: - Handwriting search (ORG-8)
+
+    var textIndexURL: URL { url.appending(path: "text-index.json") }
+
+    public func readTextIndex() -> TextIndex {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let data = try? Data(contentsOf: textIndexURL) else { return TextIndex() }
+        return (try? decoder.decode(TextIndex.self, from: data)) ?? TextIndex()
+    }
+
+    public func writeTextIndex(_ index: TextIndex) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(index).write(to: textIndexURL, options: .atomic)
+    }
+
+    public func deleteTextIndex() {
+        try? FileManager.default.removeItem(at: textIndexURL)
+    }
+
+    /// Last change to a page's ink or elements, to know when to re-index it.
+    public func pageModifiedAt(_ id: UUID) -> Date {
+        [pageURL(id), elementsURL(id)]
+            .compactMap { try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }
+            .max() ?? .distantPast
+    }
+
     // MARK: - Text boxes and images (ADR-0014)
 
     public func readElements(_ page: UUID) throws -> [PageElement] {

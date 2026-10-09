@@ -29,14 +29,18 @@ struct LibraryView: View {
         }
         .onChange(of: selection) { path = [] }
         .environment(\.openNotebook) { url in open(url, inNewWindow: false) }
+        .environment(\.openNotebookAtPage) { url, page in open(url, inNewWindow: false, page: page) }
         .environment(\.openNotebookInNewWindow) { url in open(url, inNewWindow: true) }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 store.refresh()
             }
         }
+        .task {
+            await store.indexHandwritingInBackground()
+        }
         .fullScreenCover(item: $openNotebook, onDismiss: store.notebookDidChange) { notebook in
-            EditorView(package: NotebookPackage(url: notebook.url))
+            EditorView(package: NotebookPackage(url: notebook.url), initialPage: notebook.page)
         }
         .sheet(isPresented: $isShowingSettings) {
             SettingsView()
@@ -78,7 +82,7 @@ struct LibraryView: View {
 
     /// Opens a notebook here, or in its own window. If it is already open
     /// somewhere, brings that window forward instead.
-    private func open(_ url: URL, inNewWindow: Bool) {
+    private func open(_ url: URL, inNewWindow: Bool, page: Int? = nil) {
         Task {
             // In iCloud Drive or on a NAS the files may still be downloading (ADR-0018).
             let package = NotebookPackage(url: url)
@@ -92,7 +96,7 @@ struct LibraryView: View {
             if inNewWindow || store.openNotebooks.contains(Library.normalized(url)) {
                 openWindow(value: url)
             } else {
-                openNotebook = SharedFile(url: url)
+                openNotebook = SharedFile(url: url, page: page)
             }
         }
     }

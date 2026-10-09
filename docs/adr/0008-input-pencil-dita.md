@@ -6,3 +6,6 @@
 
 ## Conseguenze
 + Niente segni accidentali col palmo. − Senza Pencil l'app va prima configurata.
+
+## Nota di implementazione (0.4)
+Lo scorrimento delle pagine accetta solo tocchi delle dita (`allowedTouchTypes = [.direct]`), quindi la Pencil scrive e basta. Quando anche le dita scrivono, si scorre con **due** dita. Con lo strumento Testo o durante l'ascolto di una registrazione, si scorre con un dito. Prima di questa correzione, un tratto con una componente verticale poteva diventare uno scorrimento.

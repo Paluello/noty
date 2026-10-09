@@ -38,3 +38,15 @@ Implementato: caselle di testo e immagini (da Foto, File o scansione di document
 Provato nel simulatore: casella di testo, linea storta raddrizzata. Coperto dai test: forme, formato degli elementi, compatibilità con i quaderni vecchi.
 Da verificare su iPad vero: cerchi e rettangoli con la Pencil, Face ID, scansione documenti, sincronizzazione con iCloud Drive e NAS.
 Limiti noti: niente annulla per testo e immagini; nessuna unione di modifiche fatte in contemporanea su due dispositivi.
+
+## Stato della 0.4 e della 0.5
+Implementato: registrazione audio a blocchi da un minuto, che continua anche in background; pausa e ripresa; riproduzione con velocità variabile; inchiostro sbiadito dopo il punto che si ascolta; tocca un tratto per sentire cosa si diceva in quel momento (ADR-0010). Ricerca nella scrittura a mano e nel testo delle pagine, sul dispositivo, con apertura sulla pagina trovata (ADR-0019).
+
+Provato nel simulatore: registrazione (file su disco, barra con tempo, stop), riproduzione (barra, avanzamento), ricerca nel contenuto ("digitato" → Spike, pagina 1). Coperto dai test: linea del tempo con pause, millesimi nelle date, indice (anche con Vision vero), esclusione dei quaderni bloccati.
+
+Corretti durante le prove:
+- lo scorrimento poteva trasformare i tratti in scorrimenti (anche con la Pencil);
+- il riconoscimento delle forme rielaborava l'ultimo tratto vecchio quando un gesto non aggiungeva nulla;
+- le date delle registrazioni erano arrotondate al secondo.
+
+Da verificare su iPad vero: registrazione con iPad bloccato, telefonate durante la registrazione, inchiostro sbiadito e salto toccando un tratto, riconoscimento di grafie vere.

@@ -99,6 +99,12 @@ public final class EditorModel {
     public var isRulerActive = false
     /// Hold the Pencil still at the end of a stroke to straighten it (STR-7).
     public var shapeRecognition = true
+    /// While a recording plays: ink written after this moment is dimmed (AUD-2).
+    public var playbackDate: Date?
+    /// Called with a stroke's time when it is tapped during playback.
+    public var onSeek: ((Date) -> Void)?
+    /// Page to show when the notebook opens, e.g. from a search result.
+    public var initialPage: Int?
     public internal(set) var paper = PaperStyle.lined
     public internal(set) var paperColor = PaperColor.white
     public var pencilTapAction = PencilAction.system

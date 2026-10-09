@@ -126,6 +126,15 @@ public struct Library: Sendable {
         }
     }
 
+    /// Notebooks whose handwriting contains `query`, with the matching pages (ORG-8).
+    public func searchHandwriting(_ query: String) -> [(entry: LibraryEntry, pages: [Int])] {
+        allEntries().compactMap { entry in
+            guard case .notebook(let url, let manifest) = entry, !manifest.isLocked else { return nil }
+            let pages = NotebookPackage(url: url).readTextIndex().pages(matching: query, order: manifest.pageIDs)
+            return pages.isEmpty ? nil : (entry, pages)
+        }
+    }
+
     /// Notebooks with the given ids, in the order of `ids`; missing ones are skipped.
     public func notebooks(withIDs ids: [UUID]) -> [LibraryEntry] {
         var byID: [UUID: LibraryEntry] = [:]

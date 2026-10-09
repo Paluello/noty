@@ -7,6 +7,8 @@ extension EnvironmentValues {
     @Entry var openNotebook: (URL) -> Void = { _ in }
     /// Opens a notebook in its own window (UI-4).
     @Entry var openNotebookInNewWindow: (URL) -> Void = { _ in }
+    /// Opens a notebook at a page, from a handwriting search result (ORG-8).
+    @Entry var openNotebookAtPage: (URL, Int) -> Void = { _, _ in }
 }
 
 /// A small live preview of a paper style, drawn with the same code as the pages.
@@ -63,6 +65,8 @@ struct ShareSheet: UIViewControllerRepresentable {
 /// Something to share, so it can drive `.sheet(item:)`.
 struct SharedFile: Identifiable {
     let url: URL
+    /// For notebooks: the page to open at.
+    var page: Int?
     var id: URL { url }
 }
 

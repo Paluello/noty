@@ -191,6 +191,16 @@
         }
       }
     },
+    "Close": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudi"
+          }
+        }
+      }
+    },
     "Color %lld": {
       "localizations": {
         "it": {
@@ -327,6 +337,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Elimina pagina"
+          }
+        }
+      }
+    },
+    "Delete Recording": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina registrazione"
           }
         }
       }
@@ -601,6 +621,16 @@
         }
       }
     },
+    "In Handwriting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nella scrittura a mano"
+          }
+        }
+      }
+    },
     "Insert Image": {
       "localizations": {
         "it": {
@@ -767,6 +797,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gestisci palette…"
+          }
+        }
+      }
+    },
+    "Microphone Access": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accesso al microfono"
           }
         }
       }
@@ -1031,6 +1071,16 @@
         }
       }
     },
+    "Page %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagina %@"
+          }
+        }
+      }
+    },
     "Pages": {
       "localizations": {
         "it": {
@@ -1091,6 +1141,26 @@
         }
       }
     },
+    "Pause": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausa"
+          }
+        }
+      }
+    },
+    "Paused": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In pausa"
+          }
+        }
+      }
+    },
     "Pen": {
       "localizations": {
         "it": {
@@ -1117,6 +1187,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Foto"
+          }
+        }
+      }
+    },
+    "Play": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci"
           }
         }
       }
@@ -1181,6 +1261,36 @@
         }
       }
     },
+    "Record Audio": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra audio"
+          }
+        }
+      }
+    },
+    "Recording": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione"
+          }
+        }
+      }
+    },
+    "Recordings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazioni"
+          }
+        }
+      }
+    },
     "Redo": {
       "localizations": {
         "it": {
@@ -1217,6 +1327,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ripristina"
+          }
+        }
+      }
+    },
+    "Resume": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprendi"
           }
         }
       }
@@ -1321,6 +1441,16 @@
         }
       }
     },
+    "Speed": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velocità"
+          }
+        }
+      }
+    },
     "Squeeze": {
       "localizations": {
         "it": {
@@ -1347,6 +1477,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Standard"
+          }
+        }
+      }
+    },
+    "Stop": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ferma"
           }
         }
       }
@@ -1427,6 +1567,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tema"
+          }
+        }
+      }
+    },
+    "To record, allow Noty to use the microphone in the iPad's Settings › Apps › Noty.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per registrare, consenti a Noty di usare il microfono in Impostazioni dell'iPad › App › Noty."
           }
         }
       }

@@ -29,6 +29,13 @@ public final class NotebookCanvasViewController: UIViewController {
     private var activeCanvases: [Int: PKCanvasView] = [:]
     private var canvasPool: [PKCanvasView] = []
     private var elementLayers: [Int: ElementLayerView] = [:]
+    // Playback (AUD-2): the real drawings, while the canvases show dimmed copies.
+    private var playbackDate: Date?
+    private var originalDrawings: [Int: PKDrawing] = [:]
+    private var dimmedCounts: [Int: Int] = [:]
+    private let seekTap = UITapGestureRecognizer()
+    /// Stroke count when the Pencil touched down, to recognize only new strokes.
+    private var strokeCountAtToolStart: [ObjectIdentifier: Int] = [:]
     private var dirtyPages: Set<Int> = []
     private var saveTask: Task<Void, Never>?
     private var isLoadingDrawing = false
@@ -79,6 +86,9 @@ public final class NotebookCanvasViewController: UIViewController {
         redoTap.numberOfTouchesRequired = 3
         scrollView.addGestureRecognizer(undoTap)
         scrollView.addGestureRecognizer(redoTap)
+        seekTap.addTarget(self, action: #selector(handleSeekTap))
+        seekTap.isEnabled = false
+        scrollView.addGestureRecognizer(seekTap)
 
         let pencilInteraction = UIPencilInteraction(delegate: self)
         view.addInteraction(pencilInteraction)
@@ -103,7 +113,10 @@ public final class NotebookCanvasViewController: UIViewController {
         scrollView.maximumZoomScale = fit * 4
         scrollView.zoomScale = fit
         applyInsets()
-        if isFirstLayout {
+        if isFirstLayout, let initialPage = model.initialPage {
+            scrollToPage(initialPage, animated: false)
+            model.initialPage = nil
+        } else if isFirstLayout {
             scrollView.contentOffset = CGPoint(x: 0, y: -scrollView.contentInset.top)
         } else {
             scrollToPage(page, animated: false)
@@ -261,6 +274,7 @@ public final class NotebookCanvasViewController: UIViewController {
         contentView.insertSubview(layer, belowSubview: canvas)
         setContentScale(renderScale, on: layer)
         elementLayers[index] = layer
+        dimFutureInk(on: canvas, at: index)
     }
 
     private func detachCanvas(from index: Int) {
@@ -270,6 +284,8 @@ public final class NotebookCanvasViewController: UIViewController {
             layer.removeFromSuperview()
         }
         guard let canvas = activeCanvases.removeValue(forKey: index) else { return }
+        originalDrawings[index] = nil
+        dimmedCounts[index] = nil
         if dirtyPages.contains(index) {
             save(canvas.drawing, at: index)
         }
@@ -346,7 +362,7 @@ public final class NotebookCanvasViewController: UIViewController {
             canvas.tool = tool
             canvas.drawingPolicy = drawingPolicy
             // With the Text tool the ink lets touches through to the text boxes.
-            canvas.isUserInteractionEnabled = !isTextTool
+            canvas.isUserInteractionEnabled = !isTextTool && playbackDate == nil
         }
         for layer in elementLayers.values {
             layer.isEditable = isTextTool
@@ -355,7 +371,24 @@ public final class NotebookCanvasViewController: UIViewController {
         for canvas in canvasPool {
             canvas.drawingPolicy = drawingPolicy
         }
+        updateScrollGestures(drawingPolicy: drawingPolicy)
         updateRuler()
+    }
+
+    /// Writing and scrolling must not compete for the same touches (ADR-0008):
+    /// - Pencil only: one finger scrolls, the Pencil never scrolls;
+    /// - fingers draw too: two fingers scroll;
+    /// - Text tool or listening: nothing draws, one finger scrolls.
+    private func updateScrollGestures(drawingPolicy: PKCanvasViewDrawingPolicy) {
+        let pan = scrollView.panGestureRecognizer
+        let inkIsLive = model.tool != .text && playbackDate == nil
+        if inkIsLive && drawingPolicy == .anyInput {
+            pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+            pan.minimumNumberOfTouches = 2
+        } else {
+            pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+            pan.minimumNumberOfTouches = 1
+        }
     }
 
     // MARK: - Commands
@@ -371,6 +404,69 @@ public final class NotebookCanvasViewController: UIViewController {
         scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: y), animated: animated)
         if !animated {
             updateVisiblePages()
+        }
+    }
+
+    // MARK: - Playback (AUD-2)
+
+    /// Dims the ink written after `date`; `nil` ends playback and restores the pages.
+    func updatePlayback(_ date: Date?) {
+        guard date != playbackDate else { return }
+        if playbackDate == nil {
+            saveNow()
+        }
+        playbackDate = date
+        seekTap.isEnabled = date != nil
+        updateScrollGestures(drawingPolicy: model.drawingPolicy)
+        if date == nil {
+            for (index, canvas) in activeCanvases {
+                if let original = originalDrawings[index] {
+                    isLoadingDrawing = true
+                    canvas.drawing = original
+                    isLoadingDrawing = false
+                }
+                canvas.isUserInteractionEnabled = model.tool != .text
+            }
+            originalDrawings = [:]
+            dimmedCounts = [:]
+        } else {
+            for (index, canvas) in activeCanvases {
+                dimFutureInk(on: canvas, at: index)
+            }
+        }
+    }
+
+    private func dimFutureInk(on canvas: PKCanvasView, at index: Int) {
+        guard let date = playbackDate else { return }
+        // No writing while listening: the canvas shows a dimmed copy.
+        canvas.isUserInteractionEnabled = false
+        let original = originalDrawings[index] ?? canvas.drawing
+        originalDrawings[index] = original
+        let future = original.strokes.filter { $0.path.creationDate > date }.count
+        guard dimmedCounts[index] != future else { return }
+        dimmedCounts[index] = future
+        var dimmed = original
+        dimmed.strokes = original.strokes.map { stroke in
+            guard stroke.path.creationDate > date else { return stroke }
+            var copy = stroke
+            copy.ink = PKInk(stroke.ink.inkType, color: stroke.ink.color.withAlphaComponent(0.15))
+            return copy
+        }
+        isLoadingDrawing = true
+        canvas.drawing = dimmed
+        isLoadingDrawing = false
+    }
+
+    /// During playback, tapping a stroke jumps to when it was written.
+    @objc private func handleSeekTap(_ gesture: UITapGestureRecognizer) {
+        let point = gesture.location(in: contentView)
+        guard let index = paperViews.indices.first(where: { frameForPage(at: $0).contains(point) }),
+              let drawing = originalDrawings[index] ?? activeCanvases[index]?.drawing
+        else { return }
+        let pagePoint = CGPoint(x: point.x - frameForPage(at: index).minX, y: point.y - frameForPage(at: index).minY)
+        let hit = drawing.strokes.last { $0.renderBounds.insetBy(dx: -12, dy: -12).contains(pagePoint) }
+        if let hit {
+            model.onSeek?(hit.path.creationDate)
         }
     }
 
@@ -507,7 +603,12 @@ extension NotebookCanvasViewController {
     /// After a stroke, if the Pencil was held still at its end, replaces the
     /// stroke with the clean shape it resembles.
     func recognizeShape(on canvas: PKCanvasView) {
-        guard model.shapeRecognition, model.tool.isInking, let stroke = canvas.drawing.strokes.last else { return }
+        let countBefore = strokeCountAtToolStart.removeValue(forKey: ObjectIdentifier(canvas)) ?? canvas.drawing.strokes.count
+        // Only the stroke just written: a gesture that added nothing must not
+        // reshape an older stroke.
+        guard model.shapeRecognition, model.tool.isInking, canvas.drawing.strokes.count > countBefore,
+              let stroke = canvas.drawing.strokes.last
+        else { return }
         let points = Array(stroke.path)
         let locations = points.map(\.location)
         let liftTime = Date.now.timeIntervalSince(stroke.path.creationDate)
@@ -551,6 +652,10 @@ extension NotebookCanvasViewController: UIPencilInteractionDelegate {
 // MARK: - PKCanvasViewDelegate
 
 extension NotebookCanvasViewController: PKCanvasViewDelegate {
+    public func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
+        strokeCountAtToolStart[ObjectIdentifier(canvasView)] = canvasView.drawing.strokes.count
+    }
+
     public func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
         recognizeShape(on: canvasView)
     }
@@ -596,6 +701,7 @@ public struct NotebookCanvas: UIViewControllerRepresentable {
         _ = model.isRulerActive
         _ = model.colorIndex
         controller.apply(tool: model.pkTool, drawingPolicy: model.drawingPolicy)
+        controller.updatePlayback(model.playbackDate)
         _ = model.topContentInset
         if controller.isViewLoaded {
             controller.applyInsets()

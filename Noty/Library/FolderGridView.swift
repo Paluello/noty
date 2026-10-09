@@ -17,6 +17,7 @@ struct FolderGridView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(\.openNotebook) private var openNotebook
     @Environment(\.openNotebookInNewWindow) private var openNotebookInNewWindow
+    @Environment(\.openNotebookAtPage) private var openNotebookAtPage
     @AppStorage(SettingsKey.sortOrder) private var sortOrder = SortOrder.modified
 
     @State private var query = ""
@@ -53,6 +54,7 @@ struct FolderGridView: View {
 
     var body: some View {
         let items = items
+        let contentMatches = isSearching ? store.searchHandwriting(query).filter { match in !items.contains(match.entry) } : []
         ScrollView {
             LazyVGrid(columns: columns, spacing: 36) {
                 ForEach(items) { item in
@@ -61,10 +63,37 @@ struct FolderGridView: View {
                 }
             }
             .padding(32)
+
+            if !contentMatches.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("In Handwriting")
+                        .font(.title3.bold())
+                        .padding(.horizontal, 32)
+                    LazyVGrid(columns: columns, spacing: 36) {
+                        ForEach(contentMatches, id: \.entry) { match in
+                            if case .notebook(let url, let manifest) = match.entry {
+                                Button {
+                                    openNotebookAtPage(url, match.pages[0])
+                                } label: {
+                                    VStack(spacing: 6) {
+                                        NotebookTile(url: url, manifest: manifest, isFavorite: store.isFavorite(match.entry), location: store.location(of: match.entry))
+                                        Text("Page \(match.pages.map { String($0 + 1) }.formatted(.list(type: .and)))")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.tint)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 32)
+                }
+                .padding(.bottom, 32)
+            }
         }
         .background { AmbientBackground() }
         .overlay {
-            if items.isEmpty {
+            if items.isEmpty && contentMatches.isEmpty {
                 emptyState
             }
         }
