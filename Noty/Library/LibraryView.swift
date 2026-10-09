@@ -3,13 +3,16 @@ import SwiftUI
 
 enum SidebarSelection: Hashable {
     case folder(URL)
+    case favorites
+    case recents
     case trash
 }
 
 /// Home screen: folder tree on the side, folder contents as a grid (screen 1).
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var store
-    /// The folder (or the Trash) chosen in the sidebar: the root of the detail column.
+    @Environment(\.openWindow) private var openWindow
+    /// The folder or list chosen in the sidebar: the root of the detail column.
     @State private var selection: SidebarSelection?
     /// Subfolders opened from the grid, below the selected folder.
     @State private var path: [URL] = []
@@ -21,25 +24,10 @@ struct LibraryView: View {
         NavigationSplitView {
             sidebar
         } detail: {
-            switch selection ?? .folder(store.root) {
-            case .trash:
-                NavigationStack {
-                    TrashView()
-                }
-            case .folder(let folder):
-                // A new stack per sidebar folder: the split view resets the detail
-                // stack whenever the sidebar selection changes.
-                NavigationStack(path: $path) {
-                    FolderGridView(folder: folder, path: $path)
-                        .navigationDestination(for: URL.self) { subfolder in
-                            FolderGridView(folder: subfolder, path: $path)
-                        }
-                }
-                .id(folder)
-            }
+            detail(for: selection ?? .folder(store.root))
         }
         .onChange(of: selection) { path = [] }
-        .environment(\.openNotebook) { url in openNotebook = SharedFile(url: url) }
+        .environment(\.openNotebook, open)
         .fullScreenCover(item: $openNotebook, onDismiss: store.notebookDidChange) { notebook in
             EditorView(package: NotebookPackage(url: notebook.url))
         }
@@ -53,6 +41,44 @@ struct LibraryView: View {
         }
     }
 
+    @ViewBuilder
+    private func detail(for selection: SidebarSelection) -> some View {
+        switch selection {
+        case .trash:
+            NavigationStack {
+                TrashView()
+            }
+        case .folder(let folder):
+            grid(.folder(folder))
+        case .favorites:
+            grid(.favorites)
+        case .recents:
+            grid(.recents)
+        }
+    }
+
+    /// A new stack per sidebar item: the split view resets the detail stack
+    /// whenever the sidebar selection changes.
+    private func grid(_ source: GridSource) -> some View {
+        NavigationStack(path: $path) {
+            FolderGridView(source: source, path: $path)
+                .navigationDestination(for: URL.self) { subfolder in
+                    FolderGridView(source: .folder(subfolder), path: $path)
+                }
+        }
+        .id(source)
+    }
+
+    /// Opens a notebook here, or brings forward the window where it is already open.
+    private func open(_ url: URL) {
+        store.markOpened(url)
+        if store.openNotebooks.contains(Library.normalized(url)) {
+            openWindow(value: url)
+        } else {
+            openNotebook = SharedFile(url: url)
+        }
+    }
+
     private var sidebar: some View {
         let tree = store.folderTree()
         return List(selection: $selection) {
@@ -63,6 +89,10 @@ struct LibraryView: View {
                         return true
                     }
                     .tag(SidebarSelection.folder(store.root))
+                Label("Favorites", systemImage: "star")
+                    .tag(SidebarSelection.favorites)
+                Label("Recents", systemImage: "clock")
+                    .tag(SidebarSelection.recents)
             }
             if let folders = tree.childrenOrNil {
                 Section("Folders") {

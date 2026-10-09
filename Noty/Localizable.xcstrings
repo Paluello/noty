@@ -111,12 +111,32 @@
         }
       }
     },
+    "Add to Favorites": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi ai preferiti"
+          }
+        }
+      }
+    },
     "Appearance": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Aspetto"
+          }
+        }
+      }
+    },
+    "As in iPad Settings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come nelle Impostazioni dell'iPad"
           }
         }
       }
@@ -197,6 +217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Crea un quaderno per iniziare a scrivere."
+          }
+        }
+      }
+    },
+    "Creates a zip with all your folders, every notebook and a PDF of each. Save it to Files, a NAS or another cloud as a backup.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea un file zip con tutte le cartelle, i quaderni e un PDF di ciascuno. Salvalo in File, su un NAS o su un altro cloud come backup."
           }
         }
       }
@@ -331,6 +361,16 @@
         }
       }
     },
+    "Double Tap": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doppio tocco"
+          }
+        }
+      }
+    },
     "Draw with Fingers": {
       "localizations": {
         "it": {
@@ -391,12 +431,42 @@
         }
       }
     },
+    "Export All": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta tutto"
+          }
+        }
+      }
+    },
     "Export PDF": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Esporta PDF"
+          }
+        }
+      }
+    },
+    "Favorite": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preferito"
+          }
+        }
+      }
+    },
+    "Favorites": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preferiti"
           }
         }
       }
@@ -411,12 +481,32 @@
         }
       }
     },
+    "Floating": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flottante"
+          }
+        }
+      }
+    },
     "Focus Mode": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Modalità concentrazione"
+          }
+        }
+      }
+    },
+    "Folder %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartella %@"
           }
         }
       }
@@ -487,6 +577,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lazo"
+          }
+        }
+      }
+    },
+    "Left": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A sinistra"
           }
         }
       }
@@ -581,6 +681,16 @@
         }
       }
     },
+    "Move Toolbar": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sposta la barra"
+          }
+        }
+      }
+    },
     "Move “%@”": {
       "localizations": {
         "it": {
@@ -641,6 +751,16 @@
         }
       }
     },
+    "No Favorites": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun preferito"
+          }
+        }
+      }
+    },
     "No Notebooks": {
       "localizations": {
         "it": {
@@ -651,12 +771,42 @@
         }
       }
     },
+    "No Recent Notebooks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun quaderno recente"
+          }
+        }
+      }
+    },
     "Notebook name": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Nome del quaderno"
+          }
+        }
+      }
+    },
+    "Notebooks you open appear here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qui compaiono i quaderni che apri."
+          }
+        }
+      }
+    },
+    "Nothing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niente"
           }
         }
       }
@@ -687,6 +837,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "OK"
+          }
+        }
+      }
+    },
+    "Open in New Window": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri in una nuova finestra"
           }
         }
       }
@@ -801,12 +961,52 @@
         }
       }
     },
+    "Position": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posizione"
+          }
+        }
+      }
+    },
+    "Previous Tool": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strumento precedente"
+          }
+        }
+      }
+    },
+    "Recents": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recenti"
+          }
+        }
+      }
+    },
     "Redo": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Ripeti"
+          }
+        }
+      }
+    },
+    "Remove from Favorites": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi dai preferiti"
           }
         }
       }
@@ -831,12 +1031,52 @@
         }
       }
     },
+    "Right": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A destra"
+          }
+        }
+      }
+    },
+    "Ruler": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Righello"
+          }
+        }
+      }
+    },
+    "Search notebooks and folders": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca quaderni e cartelle"
+          }
+        }
+      }
+    },
     "Settings": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Impostazioni"
+          }
+        }
+      }
+    },
+    "Show or Hide Ruler": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra o nascondi il righello"
           }
         }
       }
@@ -861,6 +1101,26 @@
         }
       }
     },
+    "Squeeze": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione (squeeze)"
+          }
+        }
+      }
+    },
+    "Squeeze works with Apple Pencil Pro.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La pressione (squeeze) funziona con Apple Pencil Pro."
+          }
+        }
+      }
+    },
     "Standard": {
       "localizations": {
         "it": {
@@ -871,12 +1131,72 @@
         }
       }
     },
+    "Storage": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiviazione"
+          }
+        }
+      }
+    },
+    "Switch to Eraser": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passa alla gomma"
+          }
+        }
+      }
+    },
     "Theme": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Tema"
+          }
+        }
+      }
+    },
+    "Toolbar": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra degli strumenti"
+          }
+        }
+      }
+    },
+    "Toolbar Position": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posizione della barra"
+          }
+        }
+      }
+    },
+    "Top": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In alto"
+          }
+        }
+      }
+    },
+    "Touch and hold a notebook, then choose Add to Favorites.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni premuto su un quaderno e scegli Aggiungi ai preferiti."
           }
         }
       }
@@ -967,6 +1287,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Scrittura"
+          }
+        }
+      }
+    },
+    "in %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in %@"
           }
         }
       }

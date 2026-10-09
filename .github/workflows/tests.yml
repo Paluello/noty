@@ -1,0 +1,46 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 30
+    defaults:
+      run:
+        # Explicit bash enables pipefail, so a failing xcodebuild fails the step.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Pick an iPad simulator
+        id: sim
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -m1 -oE 'iPad[^(]+\(' | sed -E 's/ *\($//')
+          echo "Using: $NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Test NotyKit (data, file format, editor logic, PDF)
+        working-directory: Packages/NotyKit
+        run: |
+          xcodebuild test -scheme NotyKit-Package \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            | xcbeautify
+
+      - name: Build the app
+        run: |
+          xcodebuild build -project Noty.xcodeproj -scheme Noty \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify

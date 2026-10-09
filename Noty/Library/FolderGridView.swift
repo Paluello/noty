@@ -2,15 +2,24 @@ import NotyCanvas
 import NotyCore
 import SwiftUI
 
-/// The contents of one folder: subfolders first, then notebooks (ORG-3).
+/// What a grid shows: a folder, or one of the smart lists in the sidebar (ORG-5).
+enum GridSource: Hashable {
+    case folder(URL)
+    case favorites
+    case recents
+}
+
+/// A grid of folders and notebooks (ORG-3), with search across the whole library (ORG-7).
 struct FolderGridView: View {
-    let folder: URL
+    let source: GridSource
     @Binding var path: [URL]
 
     @Environment(LibraryStore.self) private var store
     @Environment(\.openNotebook) private var openNotebook
+    @Environment(\.openWindow) private var openWindow
     @AppStorage(SettingsKey.sortOrder) private var sortOrder = SortOrder.modified
 
+    @State private var query = ""
     @State private var isCreatingNotebook = false
     @State private var isCreatingFolder = false
     @State private var newFolderName = ""
@@ -22,8 +31,28 @@ struct FolderGridView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 32, alignment: .top)]
 
+    private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    private var folder: URL? {
+        if case .folder(let url) = source { url } else { nil }
+    }
+
+    private var items: [LibraryEntry] {
+        if isSearching {
+            return store.search(query, sortedBy: sortOrder)
+        }
+        switch source {
+        case .folder(let url): return store.items(in: url, sortedBy: sortOrder)
+        case .favorites: return store.favorites(sortedBy: sortOrder)
+        case .recents: return store.recents()
+        }
+    }
+
+    /// Outside a folder, tiles say where each item lives.
+    private var showsLocation: Bool { isSearching || folder == nil }
+
     var body: some View {
-        let items = store.items(in: folder, sortedBy: sortOrder)
+        let items = items
         ScrollView {
             LazyVGrid(columns: columns, spacing: 36) {
                 ForEach(items) { item in
@@ -39,10 +68,11 @@ struct FolderGridView: View {
                 emptyState
             }
         }
-        .navigationTitle(store.displayName(of: folder))
+        .navigationTitle(title)
+        .searchable(text: $query, prompt: Text("Search notebooks and folders"))
         .toolbar { toolbar }
         .sheet(isPresented: $isCreatingNotebook) {
-            NewNotebookSheet(folder: folder) { package in
+            NewNotebookSheet(folder: folder ?? store.root) { package in
                 openNotebook(package.url)
             }
         }
@@ -61,7 +91,7 @@ struct FolderGridView: View {
             TextField("Name", text: $newFolderName)
             Button("Cancel", role: .cancel) {}
             Button("Create") {
-                store.createFolder(named: newFolderName, in: folder)
+                store.createFolder(named: newFolderName, in: folder ?? store.root)
             }
         }
         .alert("Rename", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
@@ -75,14 +105,23 @@ struct FolderGridView: View {
         }
     }
 
+    private var title: String {
+        switch source {
+        case .folder(let url): store.displayName(of: url)
+        case .favorites: String(localized: "Favorites")
+        case .recents: String(localized: "Recents")
+        }
+    }
+
     // MARK: - Tiles
 
     @ViewBuilder
     private func tile(for item: LibraryEntry) -> some View {
+        let location = showsLocation ? store.location(of: item) : nil
         switch item {
         case .folder(let url):
             NavigationLink(value: url) {
-                FolderTile(name: url.lastPathComponent, count: store.itemCount(in: url))
+                FolderTile(name: url.lastPathComponent, count: store.itemCount(in: url), location: location)
             }
             .buttonStyle(.plain)
             .draggable(url)
@@ -97,7 +136,7 @@ struct FolderGridView: View {
             Button {
                 openNotebook(url)
             } label: {
-                NotebookTile(url: url, manifest: manifest)
+                NotebookTile(url: url, manifest: manifest, isFavorite: store.isFavorite(item), location: location)
             }
             .buttonStyle(.plain)
             .draggable(url) {
@@ -109,6 +148,22 @@ struct FolderGridView: View {
 
     @ViewBuilder
     private func menu(for item: LibraryEntry) -> some View {
+        if case .notebook(let url, _) = item {
+            Button("Open in New Window", systemImage: "macwindow.badge.plus") {
+                store.markOpened(url)
+                openWindow(value: url)
+            }
+            if store.isFavorite(item) {
+                Button("Remove from Favorites", systemImage: "star.slash") {
+                    store.toggleFavorite(item)
+                }
+            } else {
+                Button("Add to Favorites", systemImage: "star") {
+                    store.toggleFavorite(item)
+                }
+            }
+            Divider()
+        }
         Button("Rename", systemImage: "pencil") {
             newName = item.name
             renaming = item
@@ -139,44 +194,60 @@ struct FolderGridView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            Menu {
-                Picker("Sort By", selection: $sortOrder) {
-                    ForEach(SortOrder.allCases) { order in
-                        Text(order.title).tag(order)
+        if source != .recents {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Picker("Sort By", selection: $sortOrder) {
+                        ForEach(SortOrder.allCases) { order in
+                            Text(order.title).tag(order)
+                        }
                     }
+                } label: {
+                    Label("Sort By", systemImage: "arrow.up.arrow.down")
                 }
-            } label: {
-                Label("Sort By", systemImage: "arrow.up.arrow.down")
             }
         }
-        ToolbarSpacer(.fixed, placement: .primaryAction)
-        ToolbarItem(placement: .primaryAction) {
-            Menu {
-                Button("New Notebook", systemImage: "book.closed") {
-                    isCreatingNotebook = true
+        if folder != nil {
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button("New Notebook", systemImage: "book.closed") {
+                        isCreatingNotebook = true
+                    }
+                    Button("New Folder", systemImage: "folder.badge.plus") {
+                        newFolderName = ""
+                        isCreatingFolder = true
+                    }
+                } label: {
+                    Label("New", systemImage: "plus")
                 }
-                Button("New Folder", systemImage: "folder.badge.plus") {
-                    newFolderName = ""
-                    isCreatingFolder = true
-                }
-            } label: {
-                Label("New", systemImage: "plus")
+                .buttonStyle(.glassProminent)
             }
-            .buttonStyle(.glassProminent)
         }
     }
 
+    @ViewBuilder
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Notebooks", systemImage: "book.closed")
-        } description: {
-            Text("Create a notebook to start writing.")
-        } actions: {
-            Button("New Notebook") {
-                isCreatingNotebook = true
+        if isSearching {
+            ContentUnavailableView.search(text: query)
+        } else {
+            switch source {
+            case .folder:
+                ContentUnavailableView {
+                    Label("No Notebooks", systemImage: "book.closed")
+                } description: {
+                    Text("Create a notebook to start writing.")
+                } actions: {
+                    Button("New Notebook") {
+                        isCreatingNotebook = true
+                    }
+                    .buttonStyle(.glassProminent)
+                }
+            case .favorites:
+                ContentUnavailableView("No Favorites", systemImage: "star", description: Text("Touch and hold a notebook, then choose Add to Favorites."))
+            case .recents:
+                ContentUnavailableView("No Recent Notebooks", systemImage: "clock", description: Text("Notebooks you open appear here."))
             }
-            .buttonStyle(.glassProminent)
         }
     }
 
@@ -194,11 +265,27 @@ struct FolderGridView: View {
 struct NotebookTile: View {
     let url: URL
     let manifest: NotebookManifest
+    var isFavorite = false
+    var location: String?
 
     var body: some View {
         VStack(spacing: 10) {
             CoverView(cover: .existing(manifest.cover), notebookURL: url, title: manifest.title)
+                .overlay(alignment: .topTrailing) {
+                    if isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.yellow)
+                            .frame(width: 30, height: 30)
+                            .glassEffect(.regular, in: .circle)
+                            .padding(8)
+                    }
+                }
             VStack(spacing: 2) {
+                if let location {
+                    Text("in \(location)")
+                        .lineLimit(1)
+                }
                 Text("\(manifest.pageIDs.count) pages")
                 Text(manifest.modifiedAt, format: .relative(presentation: .named))
             }
@@ -206,12 +293,17 @@ struct NotebookTile: View {
             .foregroundStyle(.secondary)
         }
         .contentShape(.rect)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(manifest.title))
+        .accessibilityValue(Text("\(manifest.pageIDs.count) pages"))
+        .accessibilityHint(isFavorite ? Text("Favorite") : Text(verbatim: ""))
     }
 }
 
 struct FolderTile: View {
     let name: String
     let count: Int
+    var location: String?
 
     var body: some View {
         VStack(spacing: 10) {
@@ -233,10 +325,19 @@ struct FolderTile: View {
                 }
                 .glassEffect(.regular.tint(Color.accentColor.opacity(0.1)), in: .rect(cornerRadius: 22))
 
-            Text("\(count) items")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            VStack(spacing: 2) {
+                if let location {
+                    Text("in \(location)")
+                        .lineLimit(1)
+                }
+                Text("\(count) items")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
         .contentShape(.rect)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Folder \(name)"))
+        .accessibilityValue(Text("\(count) items"))
     }
 }

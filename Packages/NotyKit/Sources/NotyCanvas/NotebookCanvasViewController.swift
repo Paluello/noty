@@ -77,6 +77,9 @@ public final class NotebookCanvasViewController: UIViewController {
         scrollView.addGestureRecognizer(undoTap)
         scrollView.addGestureRecognizer(redoTap)
 
+        let pencilInteraction = UIPencilInteraction(delegate: self)
+        view.addInteraction(pencilInteraction)
+
         NotificationCenter.default.addObserver(
             self, selector: #selector(saveNow),
             name: UIApplication.didEnterBackgroundNotification, object: nil
@@ -203,6 +206,17 @@ public final class NotebookCanvasViewController: UIViewController {
         let page = min(max(center, 0), paperViews.count - 1) + 1
         if model.currentPage != page {
             model.currentPage = page
+            updateRuler()
+        }
+    }
+
+    /// One ruler, on the page in the middle of the screen (STR-4).
+    private func updateRuler() {
+        for (index, canvas) in activeCanvases {
+            let isActive = model.isRulerActive && index == model.currentPage - 1
+            if canvas.isRulerActive != isActive {
+                canvas.isRulerActive = isActive
+            }
         }
     }
 
@@ -230,6 +244,7 @@ public final class NotebookCanvasViewController: UIViewController {
         contentView.addSubview(canvas)
         setContentScale(renderScale, on: canvas)
         activeCanvases[index] = canvas
+        canvas.isRulerActive = model.isRulerActive && index == model.currentPage - 1
     }
 
     private func detachCanvas(from index: Int) {
@@ -239,6 +254,7 @@ public final class NotebookCanvasViewController: UIViewController {
         }
         // Undo actions point at this canvas instance, which will show another page next.
         undoManager?.removeAllActions(withTarget: canvas)
+        canvas.isRulerActive = false
         canvas.removeFromSuperview()
         isLoadingDrawing = true
         canvas.drawing = PKDrawing()
@@ -309,6 +325,7 @@ public final class NotebookCanvasViewController: UIViewController {
         for canvas in canvasPool {
             canvas.drawingPolicy = drawingPolicy
         }
+        updateRuler()
     }
 
     // MARK: - Commands
@@ -415,6 +432,20 @@ extension NotebookCanvasViewController: UIScrollViewDelegate {
     }
 }
 
+// MARK: - UIPencilInteractionDelegate
+
+extension NotebookCanvasViewController: UIPencilInteractionDelegate {
+    public func pencilInteraction(_ interaction: UIPencilInteraction, didReceiveTap tap: UIPencilInteraction.Tap) {
+        model.handlePencilTap()
+    }
+
+    public func pencilInteraction(_ interaction: UIPencilInteraction, didReceiveSqueeze squeeze: UIPencilInteraction.Squeeze) {
+        if squeeze.phase == .ended {
+            model.handlePencilSqueeze()
+        }
+    }
+}
+
 // MARK: - PKCanvasViewDelegate
 
 extension NotebookCanvasViewController: PKCanvasViewDelegate {
@@ -456,6 +487,7 @@ public struct NotebookCanvas: UIViewControllerRepresentable {
     public func updateUIViewController(_ controller: UIViewController, context: Context) {
         guard let controller = controller as? NotebookCanvasViewController else { return }
         // Reading the model here makes SwiftUI call this again when a setting changes.
+        _ = model.isRulerActive
         controller.apply(tool: model.pkTool, drawingPolicy: model.drawingPolicy)
         _ = model.topContentInset
         if controller.isViewLoaded {

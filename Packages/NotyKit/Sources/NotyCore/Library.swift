@@ -96,6 +96,41 @@ public struct Library: Sendable {
         return .folder(url)
     }
 
+    /// Every folder and notebook in the library, at any depth (trash excluded).
+    public func allEntries() -> [LibraryEntry] {
+        var result: [LibraryEntry] = []
+        var queue = [root]
+        while let folder = queue.popLast() {
+            for entry in (try? contents(of: folder)) ?? [] {
+                result.append(entry)
+                if case .folder(let url) = entry {
+                    queue.append(url)
+                }
+            }
+        }
+        return result
+    }
+
+    /// Folders and notebooks whose name contains `query` (ORG-7), ignoring case and accents.
+    public func search(_ query: String) -> [LibraryEntry] {
+        let query = query.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return [] }
+        return allEntries().filter {
+            $0.name.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
+    }
+
+    /// Notebooks with the given ids, in the order of `ids`; missing ones are skipped.
+    public func notebooks(withIDs ids: [UUID]) -> [LibraryEntry] {
+        var byID: [UUID: LibraryEntry] = [:]
+        for entry in allEntries() {
+            if case .notebook(_, let manifest) = entry {
+                byID[manifest.id] = entry
+            }
+        }
+        return ids.compactMap { byID[$0] }
+    }
+
     public func folderTree() -> FolderNode {
         node(for: root)
     }

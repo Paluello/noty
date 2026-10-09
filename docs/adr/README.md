@@ -24,3 +24,4 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0014](0014-elementi-sovrapposti.md) | Testo e immagini come elementi separati dal disegno | Accettato |
 | [0015](0015-localizzazione-e-lingua-docs.md) | Localizzazione it/en e lingua della documentazione | Accettato |
 | [0016](0016-iphone-viewer.md) | iPhone solo in consultazione, nello stesso progetto | Accettato |
+| [0017](0017-preferiti-recenti-per-id.md) | Preferiti e recenti riferiti all'id del quaderno | Accettato |

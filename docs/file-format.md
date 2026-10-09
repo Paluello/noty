@@ -6,6 +6,7 @@ I dati di Noty sono **file normali**, leggibili anche senza l'app (ADR-0004, ADR
 La libreria è la cartella *Documenti* dell'app, visibile nell'app File in **Su iPad › Noty**.
 - Ogni **cartella** della libreria è una cartella vera.
 - Ogni **quaderno** è una cartella con estensione `.noty`.
+- `.noty-library.json` (nascosto): preferiti e quaderni recenti, riferiti all'`id` dei quaderni (ADR-0017).
 - `.Trash/` (nascosta) contiene gli elementi eliminati: una sottocartella per elemento, con `info.json` (`originalRelativePath`, `deletedAt`). Dopo 30 giorni vengono cancellati.
 
 ## Un quaderno: `Nome.noty/`

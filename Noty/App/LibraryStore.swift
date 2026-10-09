@@ -1,3 +1,4 @@
+import NotyCanvas
 import NotyCore
 import Observation
 import SwiftUI
@@ -25,6 +26,9 @@ enum SortOrder: String, CaseIterable, Identifiable {
 final class LibraryStore {
     let library: Library
     private(set) var revision = 0
+    private(set) var metadata: LibraryMetadata
+    /// Notebooks open in an editor, in any window: each is edited in one place only.
+    var openNotebooks: Set<URL> = []
     var errorMessage: String?
 
     init() {
@@ -36,6 +40,7 @@ final class LibraryStore {
             log.error("Failed to prepare library: \(error)")
         }
         library.purgeExpiredTrash()
+        metadata = LibraryMetadata.load(from: library)
     }
 
     var root: URL { library.root }
@@ -44,7 +49,35 @@ final class LibraryStore {
 
     func items(in folder: URL, sortedBy order: SortOrder) -> [LibraryEntry] {
         _ = revision
-        let items = (try? library.contents(of: folder)) ?? []
+        return sorted((try? library.contents(of: folder)) ?? [], by: order)
+    }
+
+    func favorites(sortedBy order: SortOrder) -> [LibraryEntry] {
+        _ = revision
+        return sorted(library.notebooks(withIDs: metadata.favorites), by: order)
+    }
+
+    /// Most recently opened first.
+    func recents() -> [LibraryEntry] {
+        _ = revision
+        return library.notebooks(withIDs: metadata.recents.map(\.id))
+    }
+
+    func search(_ query: String, sortedBy order: SortOrder) -> [LibraryEntry] {
+        _ = revision
+        return sorted(library.search(query), by: order)
+    }
+
+    func isFavorite(_ entry: LibraryEntry) -> Bool {
+        if case .notebook(_, let manifest) = entry { metadata.isFavorite(manifest.id) } else { false }
+    }
+
+    /// The folder an entry is in, for search results and favorites ("in Università").
+    func location(of entry: LibraryEntry) -> String {
+        displayName(of: entry.url.deletingLastPathComponent())
+    }
+
+    private func sorted(_ items: [LibraryEntry], by order: SortOrder) -> [LibraryEntry] {
         let folders = items.filter { if case .folder = $0 { true } else { false } }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         let notebooks = items.filter { if case .notebook = $0 { true } else { false } }
@@ -150,6 +183,36 @@ final class LibraryStore {
     /// Call after a notebook was edited, so covers and page counts refresh.
     func notebookDidChange() {
         revision += 1
+    }
+
+    func toggleFavorite(_ entry: LibraryEntry) {
+        guard case .notebook(_, let manifest) = entry else { return }
+        metadata.toggleFavorite(manifest.id)
+        saveMetadata()
+    }
+
+    func markOpened(_ url: URL) {
+        guard let manifest = try? NotebookPackage(url: url).readManifest() else { return }
+        metadata.markOpened(manifest.id)
+        saveMetadata()
+    }
+
+    private func saveMetadata() {
+        perform { try metadata.save(to: library) }
+    }
+
+    /// Builds the "Export All" archive off the main thread (DAT-4).
+    func exportAll() async -> URL? {
+        let library = library
+        do {
+            return try await Task.detached(priority: .userInitiated) {
+                try LibraryExporter.exportAll(library)
+            }.value
+        } catch {
+            log.error("Export failed: \(error)")
+            errorMessage = error.localizedDescription
+            return nil
+        }
     }
 
     private func applyCover(_ draft: CoverDraft, to package: NotebookPackage) throws {

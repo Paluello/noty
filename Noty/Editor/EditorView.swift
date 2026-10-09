@@ -5,60 +5,51 @@ import SwiftUI
 /// Screen 3: the notebook editor, with a floating Liquid Glass toolbar.
 struct EditorView: View {
     let package: NotebookPackage
+    /// Closes the editor; by default it dismisses the full-screen cover.
+    var onClose: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(LibraryStore.self) private var store
     @Environment(PaletteStore.self) private var palettes
+    @AppStorage(SettingsKey.toolbarPosition) private var position = ToolbarPosition.top
+    @AppStorage(SettingsKey.floatingToolbarX) private var floatingX = 0.0
+    @AppStorage(SettingsKey.floatingToolbarY) private var floatingY = 0.0
     @State private var model = EditorModel()
     @State private var title = ""
     @State private var isFocusMode = false
     @State private var isShowingPages = false
     @State private var isShowingPalettes = false
     @State private var sharedPDF: SharedFile?
-    @State private var toolbarBottom: CGFloat = 0
+    @State private var toolbarFrame = CGRect.zero
+    @State private var dragOffset = CGSize.zero
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Color(uiColor: .secondarySystemBackground)
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            ZStack {
+                Color(uiColor: .secondarySystemBackground)
+                    .ignoresSafeArea()
 
-            NotebookCanvas(package: package, model: model)
-                .ignoresSafeArea()
+                NotebookCanvas(package: package, model: model)
+                    .padding(.leading, sideInset(for: .leading))
+                    .padding(.trailing, sideInset(for: .trailing))
+                    .ignoresSafeArea()
 
-            if isFocusMode {
-                HStack {
-                    Spacer()
-                    Button("Exit Focus Mode", systemImage: "arrow.down.right.and.arrow.up.left") {
-                        withAnimation(.snappy) { isFocusMode = false }
-                    }
-                    .labelStyle(.iconOnly)
-                    .font(.title3)
-                    .frame(width: 44, height: 44)
-                    .glassEffect(.regular.interactive(), in: .circle)
-                }
-                .padding(.horizontal, 16)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            } else {
-                EditorToolbar(
-                    model: model,
-                    onClose: close,
-                    onShowPages: showPages,
-                    onShowPalettes: { isShowingPalettes = true },
-                    onExport: exportPDF,
-                    onFocusMode: { withAnimation(.snappy) { isFocusMode = true } }
-                )
-                .padding(.horizontal, 16)
-                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { toolbarBottom = $0 }
-                .transition(.move(edge: .top).combined(with: .opacity))
+                chrome
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: chromeAlignment)
             }
+            .onChange(of: toolbarFrame) { updateInset(safeTop: proxy.safeAreaInsets.top) }
+            .onChange(of: isFocusMode) { updateInset(safeTop: proxy.safeAreaInsets.top) }
+            .onChange(of: position) { updateInset(safeTop: proxy.safeAreaInsets.top) }
+            .onAppear { updateInset(safeTop: proxy.safeAreaInsets.top) }
         }
         .overlay(alignment: .bottomLeading) {
             if !isFocusMode {
                 pageIndicator
             }
         }
+        .animation(.snappy, value: position)
+        .animation(.snappy, value: isFocusMode)
         .statusBarHidden(isFocusMode)
-        .onChange(of: toolbarBottom) { updateInset() }
-        .onChange(of: isFocusMode) { updateInset() }
         .onChange(of: palettes.selectedColors, initial: true) { _, colors in
             model.palette = colors
         }
@@ -70,6 +61,10 @@ struct EditorView: View {
         .onAppear {
             EditorPreferences.load(into: model)
             title = (try? package.readManifest().title) ?? ""
+            store.openNotebooks.insert(Library.normalized(package.url))
+        }
+        .onDisappear {
+            store.openNotebooks.remove(Library.normalized(package.url))
         }
         .sheet(isPresented: $isShowingPages) {
             PageManagerSheet(package: package, model: model)
@@ -79,6 +74,105 @@ struct EditorView: View {
         }
         .sheet(item: $sharedPDF) { file in
             ShareSheet(url: file.url)
+        }
+    }
+
+    // MARK: - Toolbar placement (UI-1)
+
+    @ViewBuilder
+    private var chrome: some View {
+        if isFocusMode {
+            Button("Exit Focus Mode", systemImage: "arrow.down.right.and.arrow.up.left") {
+                isFocusMode = false
+            }
+            .labelStyle(.iconOnly)
+            .font(.title3)
+            .frame(width: 44, height: 44)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .padding(.horizontal, 16)
+            .transition(.opacity)
+        } else {
+            switch position {
+            case .top:
+                toolbar(axis: .horizontal)
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            case .leading:
+                toolbar(axis: .vertical)
+                    .padding(.leading, 12)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+            case .trailing:
+                toolbar(axis: .vertical)
+                    .padding(.trailing, 12)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            case .floating:
+                HStack(spacing: 8) {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 48)
+                        .contentShape(.rect)
+                        .gesture(dragGesture)
+                        .accessibilityLabel(Text("Move Toolbar"))
+                    toolbar(axis: .horizontal, isCompact: true)
+                }
+                .padding(.leading, 10)
+                .padding(.trailing, 4)
+                .padding(.vertical, 4)
+                .background(.thinMaterial.opacity(0.001), in: .capsule)
+                .offset(x: floatingX + dragOffset.width, y: floatingY + dragOffset.height)
+                .transition(.opacity)
+            }
+        }
+    }
+
+    private func toolbar(axis: Axis, isCompact: Bool = false) -> some View {
+        EditorToolbar(
+            model: model,
+            axis: axis,
+            isCompact: isCompact,
+            position: $position,
+            onClose: close,
+            onShowPages: showPages,
+            onShowPalettes: { isShowingPalettes = true },
+            onExport: exportPDF,
+            onFocusMode: { isFocusMode = true }
+        )
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { toolbarFrame = $0 }
+    }
+
+    private var chromeAlignment: Alignment {
+        if isFocusMode { return .topTrailing }
+        switch position {
+        case .top, .floating: return .top
+        case .leading: return .leading
+        case .trailing: return .trailing
+        }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { dragOffset = $0.translation }
+            .onEnded { value in
+                floatingX += value.translation.width
+                floatingY += value.translation.height
+                dragOffset = .zero
+            }
+    }
+
+    /// Keeps pages clear of a toolbar docked on the side.
+    private func sideInset(for edge: ToolbarPosition) -> CGFloat {
+        guard !isFocusMode, position == edge else { return 0 }
+        return toolbarFrame.width + 20
+    }
+
+    private func updateInset(safeTop: CGFloat) {
+        if isFocusMode {
+            model.topContentInset = 24
+        } else if position == .top {
+            model.topContentInset = toolbarFrame.maxY + 12
+        } else {
+            model.topContentInset = safeTop + 16
         }
     }
 
@@ -99,16 +193,14 @@ struct EditorView: View {
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: .capsule)
         .padding(20)
+        .padding(.leading, sideInset(for: .leading))
         .accessibilityLabel(Text("Pages"))
+        .accessibilityValue(Text(verbatim: "\(model.currentPage) / \(model.pageCount)"))
     }
 
     private func showPages() {
         model.save()
         isShowingPages = true
-    }
-
-    private func updateInset() {
-        model.topContentInset = isFocusMode ? 24 : toolbarBottom + 12
     }
 
     private func exportPDF() {
@@ -123,13 +215,21 @@ struct EditorView: View {
         Task.detached(priority: .utility) {
             try? PageRenderer.exportPDF(of: package, to: package.snapshotURL)
         }
-        dismiss()
+        if let onClose {
+            onClose()
+        } else {
+            dismiss()
+        }
     }
 }
 
 /// The floating toolbar: back, tools, palette, undo/redo and more (ADR-0007).
+/// Horizontal at the top or floating, vertical when docked on a side.
 struct EditorToolbar: View {
     @Bindable var model: EditorModel
+    var axis: Axis = .horizontal
+    var isCompact = false
+    @Binding var position: ToolbarPosition
     let onClose: () -> Void
     let onShowPages: () -> Void
     let onShowPalettes: () -> Void
@@ -141,9 +241,15 @@ struct EditorToolbar: View {
     @State private var lastInkingTool = ToolKind.pen
     @Namespace private var selection
 
+    private var isVertical: Bool { axis == .vertical }
+
+    private func stack(spacing: CGFloat) -> AnyLayout {
+        isVertical ? AnyLayout(VStackLayout(spacing: spacing)) : AnyLayout(HStackLayout(spacing: spacing))
+    }
+
     var body: some View {
         GlassEffectContainer(spacing: 16) {
-            HStack(spacing: 12) {
+            stack(spacing: 12).callAsFunction {
                 Button("Library", systemImage: "chevron.left", action: onClose)
                     .labelStyle(.iconOnly)
                     .frame(width: 48, height: 48)
@@ -152,40 +258,54 @@ struct EditorToolbar: View {
                 tools
                 colors
 
-                Spacer(minLength: 0)
+                if !isVertical && !isCompact {
+                    Spacer(minLength: 0)
+                }
 
-                HStack(spacing: 2) {
+                stack(spacing: 2).callAsFunction {
                     Button("Undo", systemImage: "arrow.uturn.backward", action: model.undo)
-                        .frame(width: 44, height: 48)
+                        .frame(width: 44, height: 44)
                     Button("Redo", systemImage: "arrow.uturn.forward", action: model.redo)
-                        .frame(width: 44, height: 48)
+                        .frame(width: 44, height: 44)
                 }
                 .labelStyle(.iconOnly)
-                .padding(.horizontal, 4)
+                .padding(4)
                 .glassEffect(.regular.interactive(), in: .capsule)
 
-                Menu {
-                    Button("Pages", systemImage: "square.grid.2x2", action: onShowPages)
-                    Button("Add Page", systemImage: "plus.rectangle.portrait", action: model.addPageAtEnd)
-                    Divider()
-                    Button("Palettes", systemImage: "paintpalette", action: onShowPalettes)
-                    Button("Focus Mode", systemImage: "arrow.up.left.and.arrow.down.right", action: onFocusMode)
-                    Divider()
-                    Button("Export PDF", systemImage: "square.and.arrow.up", action: onExport)
-                } label: {
-                    Label("More", systemImage: "ellipsis")
-                        .labelStyle(.iconOnly)
-                        .frame(width: 48, height: 48)
-                }
-                .glassEffect(.regular.interactive(), in: .circle)
+                moreMenu
             }
             .font(.title3)
         }
         .tint(.primary)
     }
 
+    private var moreMenu: some View {
+        Menu {
+            Button("Pages", systemImage: "square.grid.2x2", action: onShowPages)
+            Button("Add Page", systemImage: "plus.rectangle.portrait", action: model.addPageAtEnd)
+            Divider()
+            Button("Palettes", systemImage: "paintpalette", action: onShowPalettes)
+            Picker(selection: $position) {
+                ForEach(ToolbarPosition.allCases) { option in
+                    Label(option.title, systemImage: option.symbolName).tag(option)
+                }
+            } label: {
+                Label("Toolbar Position", systemImage: "rectangle.3.group")
+            }
+            .pickerStyle(.menu)
+            Button("Focus Mode", systemImage: "arrow.up.left.and.arrow.down.right", action: onFocusMode)
+            Divider()
+            Button("Export PDF", systemImage: "square.and.arrow.up", action: onExport)
+        } label: {
+            Label("More", systemImage: "ellipsis")
+                .labelStyle(.iconOnly)
+                .frame(width: 48, height: 48)
+        }
+        .glassEffect(.regular.interactive(), in: .circle)
+    }
+
     private var tools: some View {
-        HStack(spacing: 0) {
+        stack(spacing: 0).callAsFunction {
             ForEach(ToolKind.allCases) { tool in
                 Button {
                     select(tool)
@@ -193,55 +313,88 @@ struct EditorToolbar: View {
                     Image(systemName: tool.symbolName)
                         .symbolVariant(model.tool == tool ? .fill : .none)
                         .foregroundStyle(model.tool == tool ? Color.accentColor : .primary)
-                        .frame(width: 46, height: 48)
+                        .frame(width: 44, height: 44)
                         .background {
                             if model.tool == tool {
                                 Capsule()
                                     .fill(Color.accentColor.opacity(0.16))
-                                    .padding(.vertical, 6)
+                                    .padding(4)
                                     .matchedGeometryEffect(id: "tool", in: selection)
                             }
                         }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(tool.title)
+                .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
                 .popover(isPresented: Binding(get: { optionsTool == tool }, set: { if !$0 { optionsTool = nil } })) {
                     ToolOptionsView(model: model, tool: tool)
                         .presentationCompactAdaptation(.popover)
                 }
             }
+
+            // The ruler is a switch, not a tool: it stays on while you write (STR-4).
+            Button {
+                model.isRulerActive.toggle()
+            } label: {
+                Image(systemName: "ruler")
+                    .foregroundStyle(model.isRulerActive ? Color.accentColor : .primary)
+                    .frame(width: 44, height: 44)
+                    .background {
+                        if model.isRulerActive {
+                            Circle().fill(Color.accentColor.opacity(0.16)).padding(4)
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Ruler"))
+            .accessibilityAddTraits(model.isRulerActive ? .isSelected : [])
         }
-        .padding(.horizontal, 4)
+        .padding(4)
         .glassEffect(.regular.interactive(), in: .capsule)
         .animation(.snappy(duration: 0.25), value: model.tool)
     }
 
+    @ViewBuilder
     private var colors: some View {
-        HStack(spacing: 6) {
-            ForEach(model.palette.indices, id: \.self) { index in
-                Button {
-                    model.colorIndex = index
-                    if !model.tool.isInking {
-                        model.tool = lastInkingTool
-                    }
-                } label: {
-                    Circle()
-                        .fill(Color(uiColor: model.palette[index]))
-                        .frame(width: 24, height: 24)
-                        .overlay { Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1) }
-                        .padding(3)
-                        .overlay {
-                            Circle()
-                                .strokeBorder(Color.primary, lineWidth: model.colorIndex == index && model.tool.isInking ? 2 : 0)
-                        }
+        let swatches = ForEach(model.palette.indices, id: \.self) { index in
+            Button {
+                model.colorIndex = index
+                if !model.tool.isInking {
+                    model.tool = lastInkingTool
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Color \(index + 1)"))
+            } label: {
+                Circle()
+                    .fill(Color(uiColor: model.palette[index]))
+                    .frame(width: 24, height: 24)
+                    .overlay { Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1) }
+                    .padding(3)
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.primary, lineWidth: model.colorIndex == index && model.tool.isInking ? 2 : 0)
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Color \(index + 1)"))
+            .accessibilityAddTraits(model.colorIndex == index ? .isSelected : [])
+        }
+
+        Group {
+            if isVertical {
+                // Two columns keep the side toolbar short enough for landscape.
+                LazyVGrid(columns: [GridItem(.fixed(30), spacing: 4), GridItem(.fixed(30), spacing: 4)], spacing: 4) {
+                    swatches
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 6)
+            } else {
+                HStack(spacing: 6) {
+                    swatches
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 52)
             }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 48)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .glassEffect(.regular.interactive(), in: isVertical ? AnyShape(.rect(cornerRadius: 26)) : AnyShape(.capsule))
         .contextMenu {
             ForEach(palettes.palettes) { palette in
                 Button {

@@ -33,6 +33,19 @@ public enum EraserMode: String, CaseIterable, Sendable {
     case stroke
 }
 
+/// What a double tap or a squeeze of Apple Pencil does (STR-11).
+public enum PencilAction: String, CaseIterable, Identifiable, Sendable {
+    /// Follow the choice in the iPad's Settings › Apple Pencil.
+    case system
+    case switchEraser
+    case previousTool
+    case undo
+    case toggleRuler
+    case none
+
+    public var id: String { rawValue }
+}
+
 /// The standard 8-color palette (STR-5).
 public enum Palette {
     public static let size = 8
@@ -52,7 +65,14 @@ public enum Palette {
 /// Editor state shared between the SwiftUI chrome and the UIKit canvas.
 @MainActor @Observable
 public final class EditorModel {
-    public var tool: ToolKind = .pen
+    public var tool: ToolKind = .pen {
+        didSet {
+            if oldValue != tool {
+                previousTool = oldValue
+            }
+        }
+    }
+    public private(set) var previousTool: ToolKind = .eraser
     public var colorIndex = 0
     public var palette = Palette.standard
     public var eraserMode: EraserMode = .partial
@@ -71,6 +91,10 @@ public final class EditorModel {
     public var autoNewPage = true
     /// Space covered by the floating toolbar above the pages.
     public var topContentInset: CGFloat = 0
+    /// Shows PencilKit's ruler on the current page (STR-4).
+    public var isRulerActive = false
+    public var pencilTapAction = PencilAction.system
+    public var pencilSqueezeAction = PencilAction.system
 
     public internal(set) var pageIDs: [UUID] = []
     public internal(set) var currentPage = 1
@@ -100,6 +124,40 @@ public final class EditorModel {
     public func duplicatePage(at index: Int) { canvasController?.duplicatePage(at: index) }
     public func deletePage(at index: Int) { canvasController?.deletePage(at: index) }
     public func movePage(from source: Int, to destination: Int) { canvasController?.movePage(from: source, to: destination) }
+
+    /// Runs the action chosen for a Pencil double tap or squeeze.
+    public func perform(_ action: PencilAction) {
+        switch action {
+        case .system, .none:
+            break
+        case .switchEraser:
+            tool = tool == .eraser ? (previousTool == .eraser ? .pen : previousTool) : .eraser
+        case .previousTool:
+            tool = previousTool
+        case .undo:
+            undo()
+        case .toggleRuler:
+            isRulerActive.toggle()
+        }
+    }
+
+    func handlePencilTap() {
+        perform(pencilTapAction == .system ? Self.systemAction(UIPencilInteraction.preferredTapAction) : pencilTapAction)
+    }
+
+    func handlePencilSqueeze() {
+        perform(pencilSqueezeAction == .system ? Self.systemAction(UIPencilInteraction.preferredSqueezeAction) : pencilSqueezeAction)
+    }
+
+    /// Maps the iPad's Apple Pencil setting to a Noty action.
+    private static func systemAction(_ preferred: UIPencilPreferredAction) -> PencilAction {
+        switch preferred {
+        case .switchEraser: .switchEraser
+        case .switchPrevious: .previousTool
+        case .ignore: .none
+        default: .previousTool
+        }
+    }
 
     var pkTool: PKTool {
         switch tool {

@@ -8,6 +8,12 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.fingerDrawing) private var fingerDrawing = false
     @AppStorage(SettingsKey.autoNewPage) private var autoNewPage = true
     @AppStorage(SettingsKey.defaultEraser) private var defaultEraser = EraserMode.partial.rawValue
+    @AppStorage(SettingsKey.toolbarPosition) private var toolbarPosition = ToolbarPosition.top
+    @AppStorage(SettingsKey.pencilTapAction) private var pencilTap = PencilAction.system.rawValue
+    @AppStorage(SettingsKey.pencilSqueezeAction) private var pencilSqueeze = PencilAction.system.rawValue
+    @Environment(LibraryStore.self) private var store
+    @State private var isExporting = false
+    @State private var exportedArchive: SharedFile?
 
     var body: some View {
         NavigationStack {
@@ -38,6 +44,50 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Picker("Double Tap", selection: $pencilTap) {
+                        ForEach(PencilAction.allCases) { action in
+                            Text(action.title).tag(action.rawValue)
+                        }
+                    }
+                    Picker("Squeeze", selection: $pencilSqueeze) {
+                        ForEach(PencilAction.allCases) { action in
+                            Text(action.title).tag(action.rawValue)
+                        }
+                    }
+                } header: {
+                    Text(verbatim: "Apple Pencil")
+                } footer: {
+                    Text("Squeeze works with Apple Pencil Pro.")
+                }
+
+                Section("Toolbar") {
+                    Picker("Position", selection: $toolbarPosition) {
+                        ForEach(ToolbarPosition.allCases) { option in
+                            Label(option.title, systemImage: option.symbolName).tag(option)
+                        }
+                    }
+                }
+
+                Section {
+                    Button {
+                        Task { await exportAll() }
+                    } label: {
+                        HStack {
+                            Label("Export All", systemImage: "archivebox")
+                            Spacer()
+                            if isExporting {
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(isExporting)
+                } header: {
+                    Text("Storage")
+                } footer: {
+                    Text("Creates a zip with all your folders, every notebook and a PDF of each. Save it to Files, a NAS or another cloud as a backup.")
+                }
+
+                Section {
                     NavigationLink {
                         PaletteListView()
                     } label: {
@@ -53,6 +103,9 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .sheet(item: $exportedArchive) { file in
+                ShareSheet(url: file.url)
+            }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -60,6 +113,14 @@ struct SettingsView: View {
                     Button("Done", systemImage: "checkmark", role: .confirm) { dismiss() }
                 }
             }
+        }
+    }
+
+    private func exportAll() async {
+        isExporting = true
+        defer { isExporting = false }
+        if let url = await store.exportAll() {
+            exportedArchive = SharedFile(url: url)
         }
     }
 }

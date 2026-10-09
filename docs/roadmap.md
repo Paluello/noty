@@ -16,7 +16,7 @@
 - [x] Accettare o modificare gli ADR proposti
 - [x] Repository git locale, licenza GPL, template
 - [x] Repository privato su GitHub
-- [ ] CI (GitHub Actions)
+- [x] CI (GitHub Actions): test e compilazione a ogni push
 - [x] Prototipo "spike": 50 pagine A4 con PencilKit (ADR-0006). Funziona nel simulatore; resta da provare su un iPad vero con la Pencil
 
 ## Stato della 0.1 (9 ottobre 2026)
@@ -24,5 +24,10 @@ Implementata e provata nel simulatore: libreria con cartelle e sottocartelle, gr
 
 Da fare prima di chiudere la 0.1:
 - [ ] Prova su iPad vero con Apple Pencil (fluidità, nitidezza dello zoom, gesti a due/tre dita)
-- [ ] Icona dell'app
-- [ ] CI con test automatici
+- [x] Icona dell'app (provvisoria: proposta A in `docs/icon-proposals/`)
+- [x] CI con test automatici
+
+## Stato della 0.2
+Implementato: Preferiti e Recenti nella barra laterale, ricerca in tutta la libreria (anche nelle sottocartelle, senza badare a maiuscole e accenti), ordinamento, righello, doppio tocco e squeeze della Pencil configurabili, barra degli strumenti in alto / a sinistra / a destra / flottante, modalità concentrazione, quaderni in finestre separate (Split View, Stage Manager), "Esporta tutto" in zip, etichette per VoiceOver.
+
+Da verificare su iPad vero: gesti della Pencil, righello, barra laterale in orizzontale, finestre multiple.
