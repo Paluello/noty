@@ -27,15 +27,22 @@ jobs:
       - name: Pick an iPad simulator
         id: sim
         run: |
-          NAME=$(xcrun simctl list devices available | grep -m1 -oE 'iPad[^(]+\(' | sed -E 's/ *\($//')
-          echo "Using: $NAME"
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          # The newest iOS runtime's first iPad, by id (names contain parentheses).
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          runtimes = sorted((r for r in devices if ".iOS-" in r), key=lambda r: [int(x) for x in r.split("iOS-")[1].split("-")])
+          ipads = [d for d in devices[runtimes[-1]] if d["name"].startswith("iPad")]
+          print(ipads[0]["udid"])
+          ')
+          echo "Using simulator $UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
       - name: Test NotyKit (data, file format, editor logic, PDF)
         working-directory: Packages/NotyKit
         run: |
           xcodebuild test -scheme NotyKit-Package \
-            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
             | xcbeautify
 
       - name: Build the app
