@@ -16,7 +16,7 @@ struct FolderGridView: View {
 
     @Environment(LibraryStore.self) private var store
     @Environment(\.openNotebook) private var openNotebook
-    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openNotebookInNewWindow) private var openNotebookInNewWindow
     @AppStorage(SettingsKey.sortOrder) private var sortOrder = SortOrder.modified
 
     @State private var query = ""
@@ -150,8 +150,7 @@ struct FolderGridView: View {
     private func menu(for item: LibraryEntry) -> some View {
         if case .notebook(let url, _) = item {
             Button("Open in New Window", systemImage: "macwindow.badge.plus") {
-                store.markOpened(url)
-                openWindow(value: url)
+                openNotebookInNewWindow(url)
             }
             if store.isFavorite(item) {
                 Button("Remove from Favorites", systemImage: "star.slash") {
@@ -160,6 +159,19 @@ struct FolderGridView: View {
             } else {
                 Button("Add to Favorites", systemImage: "star") {
                     store.toggleFavorite(item)
+                }
+            }
+            if store.isLocked(url) {
+                Button("Unlock", systemImage: "lock.open") {
+                    Task {
+                        if await Biometrics.authenticate(reason: String(localized: "Unlock the notebook")) {
+                            store.setLocked(item, false)
+                        }
+                    }
+                }
+            } else {
+                Button("Lock", systemImage: "lock") {
+                    store.setLocked(item, true)
                 }
             }
             Divider()
@@ -271,6 +283,17 @@ struct NotebookTile: View {
     var body: some View {
         VStack(spacing: 10) {
             CoverView(cover: .existing(manifest.cover), notebookURL: url, title: manifest.title)
+                .overlay(alignment: .topLeading) {
+                    if manifest.isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.footnote)
+                            .frame(width: 30, height: 30)
+                            .glassEffect(.regular, in: .circle)
+                            .padding(8)
+                            .padding(.leading, 10)
+                            .accessibilityLabel(Text("Locked"))
+                    }
+                }
                 .overlay(alignment: .topTrailing) {
                     if isFavorite {
                         Image(systemName: "star.fill")

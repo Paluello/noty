@@ -5,12 +5,15 @@ import SwiftUI
 extension EnvironmentValues {
     /// Opens a notebook in the editor.
     @Entry var openNotebook: (URL) -> Void = { _ in }
+    /// Opens a notebook in its own window (UI-4).
+    @Entry var openNotebookInNewWindow: (URL) -> Void = { _ in }
 }
 
 /// A small live preview of a paper style, drawn with the same code as the pages.
 struct PaperPreview: View {
     let style: PaperStyle
     var orientation: PageOrientation = .portrait
+    var color: PaperColor = .white
 
     var body: some View {
         let size = PageGeometry.size(for: orientation)
@@ -18,7 +21,7 @@ struct PaperPreview: View {
             let scale = canvasSize.width / size.width
             context.scaleBy(x: scale, y: scale)
             context.withCGContext { cg in
-                cg.setFillColor(UIColor.white.cgColor)
+                cg.setFillColor(color.uiColor.cgColor)
                 cg.fill(CGRect(x: 0, y: 0, width: size.width, height: size.height))
                 PaperRenderer.draw(
                     style,

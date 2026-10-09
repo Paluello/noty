@@ -1,0 +1,17 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSFaceIDUsageDescription": {
+      "comment": "Privacy - Face ID Usage Description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noty usa Face ID per aprire i quaderni bloccati."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

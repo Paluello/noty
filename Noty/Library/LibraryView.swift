@@ -12,6 +12,7 @@ enum SidebarSelection: Hashable {
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.scenePhase) private var scenePhase
     /// The folder or list chosen in the sidebar: the root of the detail column.
     @State private var selection: SidebarSelection?
     /// Subfolders opened from the grid, below the selected folder.
@@ -27,7 +28,13 @@ struct LibraryView: View {
             detail(for: selection ?? .folder(store.root))
         }
         .onChange(of: selection) { path = [] }
-        .environment(\.openNotebook, open)
+        .environment(\.openNotebook) { url in open(url, inNewWindow: false) }
+        .environment(\.openNotebookInNewWindow) { url in open(url, inNewWindow: true) }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                store.refresh()
+            }
+        }
         .fullScreenCover(item: $openNotebook, onDismiss: store.notebookDidChange) { notebook in
             EditorView(package: NotebookPackage(url: notebook.url))
         }
@@ -69,13 +76,24 @@ struct LibraryView: View {
         .id(source)
     }
 
-    /// Opens a notebook here, or brings forward the window where it is already open.
-    private func open(_ url: URL) {
-        store.markOpened(url)
-        if store.openNotebooks.contains(Library.normalized(url)) {
-            openWindow(value: url)
-        } else {
-            openNotebook = SharedFile(url: url)
+    /// Opens a notebook here, or in its own window. If it is already open
+    /// somewhere, brings that window forward instead.
+    private func open(_ url: URL, inNewWindow: Bool) {
+        Task {
+            // In iCloud Drive or on a NAS the files may still be downloading (ADR-0018).
+            let package = NotebookPackage(url: url)
+            do {
+                try await Task.detached { try package.prepareForReading() }.value
+            } catch {
+                store.errorMessage = error.localizedDescription
+                return
+            }
+            store.markOpened(url)
+            if inNewWindow || store.openNotebooks.contains(Library.normalized(url)) {
+                openWindow(value: url)
+            } else {
+                openNotebook = SharedFile(url: url)
+            }
         }
     }
 

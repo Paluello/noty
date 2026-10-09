@@ -1,5 +1,6 @@
 import NotyCanvas
 import NotyCore
+import PhotosUI
 import SwiftUI
 
 /// Screen 3: the notebook editor, with a floating Liquid Glass toolbar.
@@ -21,6 +22,12 @@ struct EditorView: View {
     @State private var isShowingPalettes = false
     @State private var sharedPDF: SharedFile?
     @State private var toolbarFrame = CGRect.zero
+    @State private var imageSource: ImageSource?
+    @State private var photoItem: PhotosPickerItem?
+    @State private var isShowingPaper = false
+    /// Locked notebooks stay covered until Face ID or the passcode (ADR-0012).
+    @State private var isUnlocked = false
+    @State private var isLocked = false
     @State private var dragOffset = CGSize.zero
 
     var body: some View {
@@ -45,6 +52,22 @@ struct EditorView: View {
         .overlay(alignment: .bottomLeading) {
             if !isFocusMode {
                 pageIndicator
+            }
+        }
+        .overlay {
+            if isLocked && !isUnlocked {
+                ZStack {
+                    Rectangle().fill(.regularMaterial).ignoresSafeArea()
+                    ProgressView()
+                }
+            }
+        }
+        .task {
+            isLocked = (try? package.readManifest().isLocked) ?? false
+            guard isLocked else { return }
+            isUnlocked = await Biometrics.authenticate(reason: String(localized: "Open the locked notebook"))
+            if !isUnlocked {
+                close()
             }
         }
         .animation(.snappy, value: position)
@@ -75,6 +98,41 @@ struct EditorView: View {
         .sheet(item: $sharedPDF) { file in
             ShareSheet(url: file.url)
         }
+        .sheet(isPresented: $isShowingPaper) {
+            PaperSheet(model: model)
+        }
+        .photosPicker(isPresented: imageSourceBinding(.photos), selection: $photoItem, matching: .images)
+        .onChange(of: photoItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    model.insertImage(data)
+                }
+                photoItem = nil
+            }
+        }
+        .fileImporter(isPresented: imageSourceBinding(.files), allowedContentTypes: [.image]) { result in
+            guard case .success(let url) = result else { return }
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+            if let data = try? Data(contentsOf: url) {
+                model.insertImage(data)
+            }
+        }
+        .fullScreenCover(isPresented: imageSourceBinding(.scanner)) {
+            DocumentScanner { images in
+                for image in images {
+                    if let data = image.jpegData(compressionQuality: 0.9) {
+                        model.insertImage(data)
+                    }
+                }
+            }
+            .ignoresSafeArea()
+        }
+    }
+
+    private func imageSourceBinding(_ source: ImageSource) -> Binding<Bool> {
+        Binding(get: { imageSource == source }, set: { if !$0 { imageSource = nil } })
     }
 
     // MARK: - Toolbar placement (UI-1)
@@ -136,7 +194,9 @@ struct EditorView: View {
             onShowPages: showPages,
             onShowPalettes: { isShowingPalettes = true },
             onExport: exportPDF,
-            onFocusMode: { isFocusMode = true }
+            onFocusMode: { isFocusMode = true },
+            onInsertImage: { imageSource = $0 },
+            onShowPaper: { isShowingPaper = true }
         )
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { toolbarFrame = $0 }
     }
@@ -211,9 +271,12 @@ struct EditorView: View {
     private func close() {
         model.save()
         let package = package
-        // Keep a PDF copy inside the notebook, readable without Noty (ADR-0004).
-        Task.detached(priority: .utility) {
-            try? PageRenderer.exportPDF(of: package, to: package.snapshotURL)
+        // Keep a PDF copy inside the notebook, readable without Noty (ADR-0004),
+        // except for locked notebooks (ADR-0012).
+        if (try? package.readManifest().isLocked) != true {
+            Task.detached(priority: .utility) {
+                try? PageRenderer.exportPDF(of: package, to: package.snapshotURL)
+            }
         }
         if let onClose {
             onClose()
@@ -221,6 +284,11 @@ struct EditorView: View {
             dismiss()
         }
     }
+}
+
+/// Where an inserted image comes from (STR-9).
+enum ImageSource {
+    case photos, files, scanner
 }
 
 /// The floating toolbar: back, tools, palette, undo/redo and more (ADR-0007).
@@ -235,6 +303,8 @@ struct EditorToolbar: View {
     let onShowPalettes: () -> Void
     let onExport: () -> Void
     let onFocusMode: () -> Void
+    let onInsertImage: (ImageSource) -> Void
+    let onShowPaper: () -> Void
 
     @Environment(PaletteStore.self) private var palettes
     @State private var optionsTool: ToolKind?
@@ -283,6 +353,12 @@ struct EditorToolbar: View {
         Menu {
             Button("Pages", systemImage: "square.grid.2x2", action: onShowPages)
             Button("Add Page", systemImage: "plus.rectangle.portrait", action: model.addPageAtEnd)
+            Menu {
+                InsertImageButtons(onInsert: onInsertImage)
+            } label: {
+                Label("Insert Image", systemImage: "photo.badge.plus")
+            }
+            Button("Paper", systemImage: "doc.richtext", action: onShowPaper)
             Divider()
             Button("Palettes", systemImage: "paintpalette", action: onShowPalettes)
             Picker(selection: $position) {
@@ -313,7 +389,7 @@ struct EditorToolbar: View {
                     Image(systemName: tool.symbolName)
                         .symbolVariant(model.tool == tool ? .fill : .none)
                         .foregroundStyle(model.tool == tool ? Color.accentColor : .primary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 40, height: 44)
                         .background {
                             if model.tool == tool {
                                 Capsule()
@@ -327,8 +403,11 @@ struct EditorToolbar: View {
                 .accessibilityLabel(tool.title)
                 .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
                 .popover(isPresented: Binding(get: { optionsTool == tool }, set: { if !$0 { optionsTool = nil } })) {
-                    ToolOptionsView(model: model, tool: tool)
-                        .presentationCompactAdaptation(.popover)
+                    ToolOptionsView(model: model, tool: tool) { source in
+                        optionsTool = nil
+                        onInsertImage(source)
+                    }
+                    .presentationCompactAdaptation(.popover)
                 }
             }
 
@@ -338,7 +417,7 @@ struct EditorToolbar: View {
             } label: {
                 Image(systemName: "ruler")
                     .foregroundStyle(model.isRulerActive ? Color.accentColor : .primary)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 44)
                     .background {
                         if model.isRulerActive {
                             Circle().fill(Color.accentColor.opacity(0.16)).padding(4)
@@ -367,7 +446,7 @@ struct EditorToolbar: View {
                     .fill(Color(uiColor: model.palette[index]))
                     .frame(width: 24, height: 24)
                     .overlay { Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1) }
-                    .padding(3)
+                    .padding(2)
                     .overlay {
                         Circle()
                             .strokeBorder(Color.primary, lineWidth: model.colorIndex == index && model.tool.isInking ? 2 : 0)
@@ -387,7 +466,7 @@ struct EditorToolbar: View {
                 .padding(.vertical, 10)
                 .padding(.horizontal, 6)
             } else {
-                HStack(spacing: 6) {
+                HStack(spacing: 3) {
                     swatches
                 }
                 .padding(.horizontal, 10)
@@ -431,12 +510,22 @@ struct EditorToolbar: View {
 struct ToolOptionsView: View {
     @Bindable var model: EditorModel
     let tool: ToolKind
+    var onInsertImage: (ImageSource) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(tool.title)
                 .font(.headline)
-            if tool == .eraser {
+            if tool == .text {
+                Text("Tap the page to add a text box. Drag to move, use the corner to resize.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    InsertImageButtons(onInsert: onInsertImage)
+                }
+                .buttonStyle(.glass)
+            } else if tool == .eraser {
                 Picker("Eraser", selection: $model.eraserMode) {
                     Text("Partial").tag(EraserMode.partial)
                     Text("Whole Stroke").tag(EraserMode.stroke)
@@ -489,6 +578,19 @@ struct ToolOptionsView: View {
     }
 }
 
+/// Photo, file and (where there is a camera) document scanner.
+struct InsertImageButtons: View {
+    let onInsert: (ImageSource) -> Void
+
+    var body: some View {
+        Button("Photo", systemImage: "photo") { onInsert(.photos) }
+        Button("File", systemImage: "folder") { onInsert(.files) }
+        if DocumentScanner.isSupported {
+            Button("Scan Document", systemImage: "doc.viewfinder") { onInsert(.scanner) }
+        }
+    }
+}
+
 extension ToolKind {
     var title: LocalizedStringKey {
         switch self {
@@ -497,6 +599,7 @@ extension ToolKind {
         case .highlighter: "Highlighter"
         case .eraser: "Eraser"
         case .lasso: "Lasso"
+        case .text: "Text and Images"
         }
     }
 }

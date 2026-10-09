@@ -1,0 +1,9 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Delete" : {
+      "localizations" : { "it" : { "stringUnit" : { "state" : "translated", "value" : "Elimina" } } }
+    }
+  },
+  "version" : "1.0"
+}

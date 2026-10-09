@@ -10,6 +10,7 @@ struct NewNotebookSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var paper = PaperStyle.lined
+    @State private var paperColor = PaperColor.white
     @State private var orientation = PageOrientation.portrait
     @State private var cover = CoverDraft.color(Int.random(in: 0..<Cover.colorCount))
 
@@ -20,7 +21,7 @@ struct NewNotebookSheet: View {
                     HStack(alignment: .bottom, spacing: 20) {
                         CoverView(cover: cover, title: displayTitle)
                             .frame(width: 150)
-                        PaperPreview(style: paper, orientation: orientation)
+                        PaperPreview(style: paper, orientation: orientation, color: paperColor)
                             .frame(width: orientation == .portrait ? 110 : 150)
                     }
                     .frame(maxWidth: .infinity)
@@ -32,24 +33,9 @@ struct NewNotebookSheet: View {
                         .glassEffect(.regular, in: .rect(cornerRadius: 16))
 
                     section("Paper") {
-                        HStack(spacing: 14) {
-                            ForEach(PaperStyle.allCases, id: \.self) { style in
-                                Button {
-                                    paper = style
-                                } label: {
-                                    VStack(spacing: 8) {
-                                        PaperPreview(style: style)
-                                            .overlay {
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .strokeBorder(Color.accentColor, lineWidth: paper == style ? 3 : 0)
-                                            }
-                                        Text(style.title)
-                                            .font(.footnote)
-                                            .foregroundStyle(paper == style ? .primary : .secondary)
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                            }
+                        VStack(alignment: .leading, spacing: 16) {
+                            PaperStylePicker(style: $paper, color: paperColor)
+                            PaperColorPicker(color: $paperColor)
                         }
                     }
 
@@ -97,7 +83,7 @@ struct NewNotebookSheet: View {
     }
 
     private func create() {
-        guard let package = store.createNotebook(title: displayTitle, in: folder, paper: paper, orientation: orientation, cover: cover) else { return }
+        guard let package = store.createNotebook(title: displayTitle, in: folder, paper: paper, paperColor: paperColor, orientation: orientation, cover: cover) else { return }
         dismiss()
         onCreate(package)
     }

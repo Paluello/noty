@@ -1,5 +1,5 @@
 # ADR-0009: Sync tramite iCloud Drive, nessun server
-- **Stato**: Accettato · **Data**: 2026-10-09
+- **Stato**: Sostituito da [ADR-0018](0018-sync-cartella-scelta.md) · **Data**: 2026-10-09
 
 ## Decisione
 - La libreria sta nel **container iCloud Drive dell'app** (visibile in File → iCloud Drive → Noty). Se iCloud è disattivato, sta in locale (In questo iPad → Noty).

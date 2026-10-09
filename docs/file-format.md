@@ -14,7 +14,9 @@ La libreria è la cartella *Documenti* dell'app, visibile nell'app File in **Su 
 Nome.noty/
 ├── notebook.json
 ├── pages/<uuid>.drawing
-├── assets/cover-xxxxxxxx.jpg   (solo se la copertina è un'immagine)
+├── pages/<uuid>.json            (caselle di testo e immagini della pagina, se ci sono)
+├── assets/cover-xxxxxxxx.jpg    (solo se la copertina è un'immagine)
+├── assets/image-<uuid>.jpg      (immagini inserite nelle pagine)
 └── snapshot.pdf                 (copia PDF, rigenerata alla chiusura)
 ```
 
@@ -26,7 +28,9 @@ Nome.noty/
   "title" : "Analisi 1",
   "cover" : { "color" : { "index" : 3 } },
   "paper" : "lined",
+  "paperColor" : "white",
   "orientation" : "portrait",
+  "isLocked" : false,
   "pageIDs" : [ "A1B2…", "C3D4…" ],
   "createdAt" : "2026-10-09T10:15:00Z",
   "modifiedAt" : "2026-10-09T11:02:41Z"
@@ -36,6 +40,8 @@ Nome.noty/
 |---|---|
 | `cover` | `{"color": {"index": 0…11}}` oppure `{"image": {"fileName": "cover-….jpg"}}` |
 | `paper` | `blank`, `lined`, `grid`, `dotted` |
+| `paperColor` | `white`, `ivory`, `gray`; se manca (quaderni della 0.1/0.2) vale `white` |
+| `isLocked` | `true` se il quaderno si apre solo con Face ID o il codice; se manca vale `false` |
 | `orientation` | `portrait`, `landscape`; le pagine sono sempre A4 (595 × 842 pt) |
 | `pageIDs` | ordine delle pagine; ogni id corrisponde a `pages/<id>.drawing` |
 | date | ISO 8601, precisione al secondo |
@@ -46,8 +52,19 @@ Un'app che legge un `formatVersion` più alto di quello che conosce deve rifiuta
 I tratti della pagina, nel formato `PKDrawing.dataRepresentation()` di Apple PencilKit. Se il file manca, la pagina è vuota.
 Lo sfondo (righe, quadretti, puntini) **non** è nel disegno: viene disegnato da Noty in base a `paper`.
 
+### `pages/<uuid>.json`
+Caselle di testo e immagini della pagina, disegnate **sotto** l'inchiostro (ADR-0014). Le coordinate sono in punti della pagina A4; `frame` è `[[x, y], [larghezza, altezza]]`.
+```json
+[
+  { "id" : "CC09…", "frame" : [[395, 60], [184, 44]],
+    "content" : { "text" : { "string" : "Ciao", "fontSize" : 18, "colorHex" : "#000000" } } },
+  { "id" : "A7F2…", "frame" : [[120, 300], [357, 238]],
+    "content" : { "image" : { "fileName" : "image-1B2C….jpg" } } }
+]
+```
+
 ### `snapshot.pdf`
-Un PDF A4 con tutte le pagine (sfondo e tratti), rigenerato quando chiudi il quaderno. Serve a leggere le note ovunque, anche senza Noty.
+Un PDF A4 con tutte le pagine (sfondo, testo, immagini e tratti), rigenerato quando chiudi il quaderno. Non esiste per i quaderni bloccati. Serve a leggere le note ovunque, anche senza Noty.
 
 ## Scritture sicure
 Ogni file viene scritto in modo atomico: prima su un file temporaneo, poi con una sostituzione. Una pagina viene salvata circa 1 secondo dopo l'ultimo tratto, quando la pagina esce dallo schermo, quando chiudi il quaderno e quando l'app va in background.

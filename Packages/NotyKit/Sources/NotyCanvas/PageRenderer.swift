@@ -21,13 +21,35 @@ public enum PageRenderer {
 
     private static func drawPage(_ pageID: UUID, of package: NotebookPackage, manifest: NotebookManifest, in context: CGContext, inkScale: CGFloat, lineScale: CGFloat = 1) {
         let rect = pageRect(manifest)
-        context.setFillColor(UIColor.white.cgColor)
+        context.setFillColor(manifest.paperColor.uiColor.cgColor)
         context.fill(rect)
         PaperRenderer.draw(manifest.paper, in: rect, context: context, lineScale: lineScale)
+        drawElements(of: pageID, in: package, context: context)
         let drawing = drawing(pageID, in: package)
         guard !drawing.strokes.isEmpty else { return }
         lightTraits.performAsCurrent {
             drawing.image(from: rect, scale: inkScale).draw(in: rect)
+        }
+    }
+
+    /// Text boxes and images, under the ink like on screen (ADR-0014).
+    private static func drawElements(of pageID: UUID, in package: NotebookPackage, context: CGContext) {
+        let elements = (try? package.readElements(pageID)) ?? []
+        guard !elements.isEmpty else { return }
+        UIGraphicsPushContext(context)
+        defer { UIGraphicsPopContext() }
+        for element in elements {
+            switch element.content {
+            case .image(let fileName):
+                UIImage(contentsOfFile: package.assetURL(fileName).path(percentEncoded: false))?.draw(in: element.frame)
+            case .text(let string, let fontSize, let colorHex):
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: fontSize),
+                    .foregroundColor: UIColor(hex: colorHex),
+                ]
+                NSAttributedString(string: string, attributes: attributes)
+                    .draw(in: element.frame.inset(by: TextElementView.textInsets))
+            }
         }
     }
 

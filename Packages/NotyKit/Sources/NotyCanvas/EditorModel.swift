@@ -1,9 +1,12 @@
+import NotyCore
 import Observation
 import PencilKit
 import UIKit
 
 public enum ToolKind: String, CaseIterable, Identifiable, Sendable {
     case pen, pencil, highlighter, eraser, lasso
+    /// Text boxes and images: the ink lets touches through (ADR-0014).
+    case text
 
     public var id: String { rawValue }
 
@@ -14,6 +17,7 @@ public enum ToolKind: String, CaseIterable, Identifiable, Sendable {
         case .highlighter: "highlighter"
         case .eraser: "eraser"
         case .lasso: "lasso"
+        case .text: "textformat"
         }
     }
 
@@ -21,7 +25,7 @@ public enum ToolKind: String, CaseIterable, Identifiable, Sendable {
     public var isInking: Bool {
         switch self {
         case .pen, .pencil, .highlighter: true
-        case .eraser, .lasso: false
+        case .eraser, .lasso, .text: false
         }
     }
 }
@@ -93,6 +97,10 @@ public final class EditorModel {
     public var topContentInset: CGFloat = 0
     /// Shows PencilKit's ruler on the current page (STR-4).
     public var isRulerActive = false
+    /// Hold the Pencil still at the end of a stroke to straighten it (STR-7).
+    public var shapeRecognition = true
+    public internal(set) var paper = PaperStyle.lined
+    public internal(set) var paperColor = PaperColor.white
     public var pencilTapAction = PencilAction.system
     public var pencilSqueezeAction = PencilAction.system
 
@@ -124,6 +132,17 @@ public final class EditorModel {
     public func duplicatePage(at index: Int) { canvasController?.duplicatePage(at: index) }
     public func deletePage(at index: Int) { canvasController?.deletePage(at: index) }
     public func movePage(from source: Int, to destination: Int) { canvasController?.movePage(from: source, to: destination) }
+
+    /// Puts an image on the current page and switches to the Text tool to place it.
+    public func insertImage(_ data: Data) {
+        canvasController?.insertImage(data)
+        tool = .text
+    }
+
+    /// Changes the paper of the whole notebook (PAG-5).
+    public func setPaper(_ style: PaperStyle, color: PaperColor) {
+        canvasController?.setPaper(style, color: color)
+    }
 
     /// Runs the action chosen for a Pencil double tap or squeeze.
     public func perform(_ action: PencilAction) {
@@ -166,6 +185,8 @@ public final class EditorModel {
         case .highlighter: PKInkingTool(.marker, color: color, width: width(for: .highlighter))
         case .eraser: PKEraserTool(eraserMode == .stroke ? .vector : .bitmap)
         case .lasso: PKLassoTool()
+        // Unused while the canvas lets touches through to text boxes.
+        case .text: PKInkingTool(.pen, color: color, width: width(for: .pen))
         }
     }
 

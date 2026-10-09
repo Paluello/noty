@@ -9,19 +9,23 @@ struct NotyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            LibraryView()
-                .environment(store)
-                .environment(palettes)
-                .preferredColorScheme(appearance.colorScheme)
+            AppLockGate {
+                LibraryView()
+            }
+            .environment(store)
+            .environment(palettes)
+            .preferredColorScheme(appearance.colorScheme)
         }
 
         // A notebook in its own window, for Split View and Stage Manager (UI-4).
         WindowGroup(for: URL.self) { $url in
             if let url {
-                NotebookWindow(url: url)
-                    .environment(store)
-                    .environment(palettes)
-                    .preferredColorScheme(appearance.colorScheme)
+                AppLockGate {
+                    NotebookWindow(url: url)
+                }
+                .environment(store)
+                .environment(palettes)
+                .preferredColorScheme(appearance.colorScheme)
             }
         }
     }

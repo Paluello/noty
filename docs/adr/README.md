@@ -16,7 +16,7 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0006](0006-pagine-fisse.md) | Pagine a dimensione fissa con sfondo separato | Accettato |
 | [0007](0007-toolbar-personalizzata.md) | Barra strumenti personalizzata invece di PKToolPicker | Accettato |
 | [0008](0008-input-pencil-dita.md) | Solo la Pencil disegna, le dita navigano | Accettato |
-| [0009](0009-sync-icloud-drive.md) | Sync tramite iCloud Drive, nessun server | Accettato |
+| [0009](0009-sync-icloud-drive.md) | Sync tramite iCloud Drive, nessun server | Sostituito da ADR-0018 |
 | [0010](0010-audio.md) | Registrazione audio in background con sincronizzazione dei tratti | Accettato |
 | [0011](0011-licenza-gpl.md) | Licenza GPL-3.0-or-later e distribuzione tramite AltStore | Accettato |
 | [0012](0012-blocco-face-id.md) | Blocco Face ID: protezione dell'accesso, non cifratura (v1) | Accettato |
@@ -25,3 +25,4 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0015](0015-localizzazione-e-lingua-docs.md) | Localizzazione it/en e lingua della documentazione | Accettato |
 | [0016](0016-iphone-viewer.md) | iPhone solo in consultazione, nello stesso progetto | Accettato |
 | [0017](0017-preferiti-recenti-per-id.md) | Preferiti e recenti riferiti all'id del quaderno | Accettato |
+| [0018](0018-sync-cartella-scelta.md) | Sincronizzazione tramite una cartella scelta dall'utente | Accettato |

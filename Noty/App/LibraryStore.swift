@@ -24,7 +24,7 @@ enum SortOrder: String, CaseIterable, Identifiable {
 /// so views that read the library refresh.
 @MainActor @Observable
 final class LibraryStore {
-    let library: Library
+    private(set) var library: Library
     private(set) var revision = 0
     private(set) var metadata: LibraryMetadata
     /// Notebooks open in an editor, in any window: each is edited in one place only.
@@ -32,18 +32,115 @@ final class LibraryStore {
     var errorMessage: String?
 
     init() {
-        // The app's Documents folder is visible in the Files app (DAT-5, ADR-0005).
-        library = Library(root: URL.documentsDirectory)
+        // The app's Documents folder is visible in the Files app (DAT-5, ADR-0005),
+        // unless the user picked another folder: iCloud Drive, a NAS… (ADR-0018).
+        let library = Library(root: Self.resolveChosenFolder() ?? URL.documentsDirectory)
         do {
             try library.prepare()
         } catch {
             log.error("Failed to prepare library: \(error)")
         }
         library.purgeExpiredTrash()
+        self.library = library
         metadata = LibraryMetadata.load(from: library)
     }
 
     var root: URL { library.root }
+
+    // MARK: - Library location (ADR-0018)
+
+    /// True when the library lives in a folder the user chose.
+    var usesChosenFolder: Bool {
+        library.root != Library.normalized(URL.documentsDirectory)
+    }
+
+    var locationName: String {
+        usesChosenFolder ? library.root.lastPathComponent : String(localized: "On this iPad")
+    }
+
+    private static func resolveChosenFolder() -> URL? {
+        guard let data = UserDefaults.standard.data(forKey: SettingsKey.libraryBookmark) else { return nil }
+        var isStale = false
+        guard let url = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &isStale),
+              url.startAccessingSecurityScopedResource()
+        else {
+            log.error("The chosen library folder is not reachable; using the iPad's storage")
+            return nil
+        }
+        if isStale, let fresh = try? url.bookmarkData() {
+            UserDefaults.standard.set(fresh, forKey: SettingsKey.libraryBookmark)
+        }
+        return url
+    }
+
+    /// Moves the library to a folder picked in Files, optionally copying the current notebooks there.
+    func useFolder(_ url: URL, copyingCurrentLibrary: Bool) {
+        guard url.startAccessingSecurityScopedResource() else {
+            errorMessage = String(localized: "Noty can't use this folder.")
+            return
+        }
+        perform {
+            let bookmark = try url.bookmarkData()
+            let destination = Library(root: url)
+            try destination.prepare()
+            if copyingCurrentLibrary {
+                let fm = FileManager.default
+                let items = try fm.contentsOfDirectory(at: library.root, includingPropertiesForKeys: nil)
+                for item in items where !item.lastPathComponent.hasPrefix(".") || item.lastPathComponent == LibraryMetadata.fileName {
+                    let target = destination.root.appending(path: item.lastPathComponent)
+                    if !fm.fileExists(atPath: target.path(percentEncoded: false)) {
+                        try fm.copyItem(at: item, to: target)
+                    }
+                }
+            }
+            UserDefaults.standard.set(bookmark, forKey: SettingsKey.libraryBookmark)
+            switchTo(destination)
+        }
+    }
+
+    /// Back to the library inside the app (On My iPad › Noty).
+    func useDeviceStorage() {
+        if usesChosenFolder {
+            library.root.stopAccessingSecurityScopedResource()
+        }
+        UserDefaults.standard.removeObject(forKey: SettingsKey.libraryBookmark)
+        perform {
+            let local = Library(root: URL.documentsDirectory)
+            try local.prepare()
+            switchTo(local)
+        }
+    }
+
+    private func switchTo(_ newLibrary: Library) {
+        library = newLibrary
+        metadata = LibraryMetadata.load(from: newLibrary)
+        openNotebooks = []
+    }
+
+    /// Picks up changes made elsewhere (Files app, other devices).
+    func refresh() {
+        revision += 1
+    }
+
+    // MARK: - Locking (DAT-7)
+
+    func isLocked(_ url: URL) -> Bool {
+        (try? NotebookPackage(url: url).readManifest().isLocked) ?? false
+    }
+
+    func setLocked(_ entry: LibraryEntry, _ isLocked: Bool) {
+        guard case .notebook(let url, _) = entry else { return }
+        perform {
+            let package = NotebookPackage(url: url)
+            var manifest = try package.readManifest()
+            manifest.isLocked = isLocked
+            try package.writeManifest(manifest)
+            // No readable PDF copy of a locked notebook (ADR-0012).
+            if isLocked {
+                try? FileManager.default.removeItem(at: package.snapshotURL)
+            }
+        }
+    }
 
     // MARK: - Reading
 
@@ -135,9 +232,9 @@ final class LibraryStore {
         perform { try library.createFolder(named: name, in: parent) }
     }
 
-    func createNotebook(title: String, in parent: URL, paper: PaperStyle, orientation: PageOrientation, cover: CoverDraft) -> NotebookPackage? {
+    func createNotebook(title: String, in parent: URL, paper: PaperStyle, paperColor: PaperColor, orientation: PageOrientation, cover: CoverDraft) -> NotebookPackage? {
         perform {
-            let package = try library.createNotebook(title: title, in: parent, paper: paper, orientation: orientation, cover: .color(index: 0))
+            let package = try library.createNotebook(title: title, in: parent, paper: paper, paperColor: paperColor, orientation: orientation, cover: .color(index: 0))
             try applyCover(cover, to: package)
             return package
         }

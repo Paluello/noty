@@ -28,6 +28,7 @@ public final class NotebookCanvasViewController: UIViewController {
     private let paperImages = PaperImageCache()
     private var activeCanvases: [Int: PKCanvasView] = [:]
     private var canvasPool: [PKCanvasView] = []
+    private var elementLayers: [Int: ElementLayerView] = [:]
     private var dirtyPages: Set<Int> = []
     private var saveTask: Task<Void, Never>?
     private var isLoadingDrawing = false
@@ -45,6 +46,8 @@ public final class NotebookCanvasViewController: UIViewController {
         super.init(nibName: nil, bundle: nil)
         model.canvasController = self
         model.pageIDs = manifest.pageIDs
+        model.paper = manifest.paper
+        model.paperColor = manifest.paperColor
     }
 
     @available(*, unavailable)
@@ -133,7 +136,7 @@ public final class NotebookCanvasViewController: UIViewController {
     }
 
     private func addPaperView(at index: Int) {
-        let paper = PaperView(style: manifest.paper, frame: frameForPage(at: index))
+        let paper = PaperView(color: manifest.paperColor, frame: frameForPage(at: index))
         paper.show(currentPaperImage)
         contentView.insertSubview(paper, at: 0)
         paperViews.append(paper)
@@ -162,7 +165,7 @@ public final class NotebookCanvasViewController: UIViewController {
     }
 
     private var currentPaperImage: CGImage? {
-        paperImages.image(manifest.paper, size: pageSize, scale: renderScale)
+        paperImages.image(manifest.paper, color: manifest.paperColor, size: pageSize, scale: renderScale)
     }
 
     /// Re-renders paper and ink at the current zoom so they stay sharp.
@@ -174,6 +177,9 @@ public final class NotebookCanvasViewController: UIViewController {
         }
         for canvas in activeCanvases.values {
             setContentScale(scale, on: canvas)
+        }
+        for layer in elementLayers.values {
+            setContentScale(scale, on: layer)
         }
     }
 
@@ -245,9 +251,24 @@ public final class NotebookCanvasViewController: UIViewController {
         setContentScale(renderScale, on: canvas)
         activeCanvases[index] = canvas
         canvas.isRulerActive = model.isRulerActive && index == model.currentPage - 1
+        canvas.isUserInteractionEnabled = model.tool != .text
+
+        // Text boxes and images sit between the paper and the ink (ADR-0014).
+        let layer = ElementLayerView(pageID: manifest.pageIDs[index], package: package, frame: frameForPage(at: index))
+        layer.onChange = { [weak self] in self?.scheduleSave() }
+        layer.isEditable = model.tool == .text
+        layer.textColorHex = model.color.hex
+        contentView.insertSubview(layer, belowSubview: canvas)
+        setContentScale(renderScale, on: layer)
+        elementLayers[index] = layer
     }
 
     private func detachCanvas(from index: Int) {
+        if let layer = elementLayers.removeValue(forKey: index) {
+            layer.endEditing(true)
+            layer.save()
+            layer.removeFromSuperview()
+        }
         guard let canvas = activeCanvases.removeValue(forKey: index) else { return }
         if dirtyPages.contains(index) {
             save(canvas.drawing, at: index)
@@ -295,7 +316,9 @@ public final class NotebookCanvasViewController: UIViewController {
     @objc func saveNow() {
         saveTask?.cancel()
         let pending = dirtyPages
-        guard !pending.isEmpty else { return }
+        let dirtyLayers = elementLayers.values.filter(\.isDirty)
+        guard !pending.isEmpty || !dirtyLayers.isEmpty else { return }
+        dirtyLayers.forEach { $0.save() }
         for index in pending {
             if let canvas = activeCanvases[index] {
                 save(canvas.drawing, at: index)
@@ -318,9 +341,16 @@ public final class NotebookCanvasViewController: UIViewController {
     // MARK: - Settings
 
     func apply(tool: PKTool, drawingPolicy: PKCanvasViewDrawingPolicy) {
+        let isTextTool = model.tool == .text
         for canvas in activeCanvases.values {
             canvas.tool = tool
             canvas.drawingPolicy = drawingPolicy
+            // With the Text tool the ink lets touches through to the text boxes.
+            canvas.isUserInteractionEnabled = !isTextTool
+        }
+        for layer in elementLayers.values {
+            layer.isEditable = isTextTool
+            layer.textColorHex = model.color.hex
         }
         for canvas in canvasPool {
             canvas.drawingPolicy = drawingPolicy
@@ -342,6 +372,45 @@ public final class NotebookCanvasViewController: UIViewController {
         if !animated {
             updateVisiblePages()
         }
+    }
+
+    /// Adds an image to the page in the middle of the screen (STR-9).
+    func insertImage(_ data: Data) {
+        guard let image = UIImage(data: data), let jpeg = Self.prepareImage(image) else { return }
+        let index = model.currentPage - 1
+        if elementLayers[index] == nil {
+            attachCanvas(to: index)
+        }
+        do {
+            let fileName = try package.writeAsset(jpeg, fileExtension: "jpg")
+            elementLayers[index]?.addImage(fileName: fileName, size: image.size)
+            saveNow()
+        } catch {
+            log.error("Failed to insert image: \(error)")
+        }
+    }
+
+    /// Shrinks big photos to at most 2000 px, so notebooks stay light.
+    private static func prepareImage(_ image: UIImage) -> Data? {
+        let maxSide: CGFloat = 2000
+        let pixelSize = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+        let scale = min(1, maxSide / max(pixelSize.width, pixelSize.height))
+        let size = CGSize(width: pixelSize.width * scale, height: pixelSize.height * scale)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }.jpegData(compressionQuality: 0.85)
+    }
+
+    /// Changes the paper of every page (PAG-5).
+    func setPaper(_ style: PaperStyle, color: PaperColor) {
+        guard style != manifest.paper || color != manifest.paperColor else { return }
+        manifest.paper = style
+        manifest.paperColor = color
+        model.paper = style
+        model.paperColor = color
+        changePages { _ in }
     }
 
     /// Rebuilds every page after the page list changed (PAG-4).
@@ -432,6 +501,39 @@ extension NotebookCanvasViewController: UIScrollViewDelegate {
     }
 }
 
+// MARK: - Shape recognition (STR-7, ADR-0013)
+
+extension NotebookCanvasViewController {
+    /// After a stroke, if the Pencil was held still at its end, replaces the
+    /// stroke with the clean shape it resembles.
+    func recognizeShape(on canvas: PKCanvasView) {
+        guard model.shapeRecognition, model.tool.isInking, let stroke = canvas.drawing.strokes.last else { return }
+        let points = Array(stroke.path)
+        let locations = points.map(\.location)
+        let liftTime = Date.now.timeIntervalSince(stroke.path.creationDate)
+        guard let hold = ShapeRecognizer.holdStart(locations: locations, times: points.map(\.timeOffset), liftTime: liftTime),
+              let shape = ShapeRecognizer.recognize(Array(locations[..<hold]))
+        else { return }
+
+        let template = points[hold / 2]
+        let newPoints = ShapeRecognizer.points(for: shape).enumerated().map { index, location in
+            PKStrokePoint(
+                location: location,
+                timeOffset: TimeInterval(index) * 0.004,
+                size: template.size,
+                opacity: template.opacity,
+                force: template.force,
+                azimuth: template.azimuth,
+                altitude: template.altitude
+            )
+        }
+        let path = PKStrokePath(controlPoints: newPoints, creationDate: stroke.path.creationDate)
+        var drawing = canvas.drawing
+        drawing.strokes[drawing.strokes.count - 1] = PKStroke(ink: stroke.ink, path: path, transform: stroke.transform, mask: stroke.mask)
+        canvas.drawing = drawing
+    }
+}
+
 // MARK: - UIPencilInteractionDelegate
 
 extension NotebookCanvasViewController: UIPencilInteractionDelegate {
@@ -449,6 +551,10 @@ extension NotebookCanvasViewController: UIPencilInteractionDelegate {
 // MARK: - PKCanvasViewDelegate
 
 extension NotebookCanvasViewController: PKCanvasViewDelegate {
+    public func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
+        recognizeShape(on: canvasView)
+    }
+
     public func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
         guard !isLoadingDrawing else { return }
         let index = canvasView.tag
@@ -488,6 +594,7 @@ public struct NotebookCanvas: UIViewControllerRepresentable {
         guard let controller = controller as? NotebookCanvasViewController else { return }
         // Reading the model here makes SwiftUI call this again when a setting changes.
         _ = model.isRulerActive
+        _ = model.colorIndex
         controller.apply(tool: model.pkTool, drawingPolicy: model.drawingPolicy)
         _ = model.topContentInset
         if controller.isViewLoaded {

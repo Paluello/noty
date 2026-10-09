@@ -7,12 +7,9 @@ import UIKit
 /// All pages share one rendered image of the pattern: drawing each page on its
 /// own would cost ~15 MB per page at high zoom.
 final class PaperView: UIView {
-    let style: PaperStyle
-
-    init(style: PaperStyle, frame: CGRect) {
-        self.style = style
+    init(color: PaperColor, frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = .white
+        backgroundColor = color.uiColor
         isUserInteractionEnabled = false
         layer.contentsGravity = .resize
         layer.shadowColor = UIColor.black.cgColor
@@ -37,6 +34,7 @@ final class PaperView: UIView {
 final class PaperImageCache {
     private struct Key: Hashable {
         let style: PaperStyle
+        let color: PaperColor
         let width: Int
         let height: Int
         let scale: Int
@@ -44,10 +42,10 @@ final class PaperImageCache {
 
     private var images: [Key: CGImage] = [:]
 
-    func image(_ style: PaperStyle, size: CGSize, scale: CGFloat) -> CGImage? {
+    func image(_ style: PaperStyle, color: PaperColor, size: CGSize, scale: CGFloat) -> CGImage? {
         // Round the scale so small zoom changes reuse the same image.
         let roundedScale = max(1, (scale * 2).rounded(.up) / 2)
-        let key = Key(style: style, width: Int(size.width), height: Int(size.height), scale: Int(roundedScale * 100))
+        let key = Key(style: style, color: color, width: Int(size.width), height: Int(size.height), scale: Int(roundedScale * 100))
         if let image = images[key] {
             return image
         }
@@ -56,7 +54,7 @@ final class PaperImageCache {
         format.opaque = true
         let rect = CGRect(origin: .zero, size: size)
         let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
-            UIColor.white.setFill()
+            color.uiColor.setFill()
             context.fill(rect)
             PaperRenderer.draw(style, in: rect, context: context.cgContext)
         }.cgImage
@@ -64,6 +62,16 @@ final class PaperImageCache {
         images = [:]
         images[key] = image
         return image
+    }
+}
+
+extension PaperColor {
+    public var uiColor: UIColor {
+        switch self {
+        case .white: .white
+        case .ivory: UIColor(red: 0.984, green: 0.965, blue: 0.914, alpha: 1)
+        case .gray: UIColor(red: 0.945, green: 0.949, blue: 0.957, alpha: 1)
+        }
     }
 }
 

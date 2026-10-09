@@ -39,6 +39,13 @@ public enum Cover: Codable, Hashable, Sendable {
     }
 }
 
+/// Color of the paper (PAG-3).
+public enum PaperColor: String, Codable, CaseIterable, Sendable {
+    case white
+    case ivory
+    case gray
+}
+
 /// Contents of `notebook.json` (ADR-0004).
 public struct NotebookManifest: Codable, Hashable, Sendable {
     public static let currentFormatVersion = 1
@@ -48,8 +55,12 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
     public var title: String
     public var cover: Cover
     public var paper: PaperStyle
+    /// Added in 0.3; missing in older notebooks, which are white.
+    public var paperColor: PaperColor
     public var orientation: PageOrientation
     public var pageIDs: [UUID]
+    /// Opening needs Face ID or the passcode (DAT-7, ADR-0012). Added in 0.3.
+    public var isLocked: Bool
     public var createdAt: Date
     public var modifiedAt: Date
 
@@ -58,6 +69,7 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
         title: String,
         cover: Cover = .randomColor(),
         paper: PaperStyle,
+        paperColor: PaperColor = .white,
         orientation: PageOrientation = .portrait,
         pageIDs: [UUID] = [UUID()],
         createdAt: Date = .now
@@ -67,9 +79,31 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
         self.title = title
         self.cover = cover
         self.paper = paper
+        self.paperColor = paperColor
         self.orientation = orientation
         self.pageIDs = pageIDs
+        self.isLocked = false
         self.createdAt = createdAt
         self.modifiedAt = createdAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case formatVersion, id, title, cover, paper, paperColor, orientation, pageIDs, isLocked, createdAt, modifiedAt
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        formatVersion = try container.decode(Int.self, forKey: .formatVersion)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        cover = try container.decode(Cover.self, forKey: .cover)
+        paper = try container.decode(PaperStyle.self, forKey: .paper)
+        // Optional fields keep notebooks from 0.1 and 0.2 readable.
+        paperColor = try container.decodeIfPresent(PaperColor.self, forKey: .paperColor) ?? .white
+        orientation = try container.decode(PageOrientation.self, forKey: .orientation)
+        pageIDs = try container.decode([UUID].self, forKey: .pageIDs)
+        isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        modifiedAt = try container.decode(Date.self, forKey: .modifiedAt)
     }
 }

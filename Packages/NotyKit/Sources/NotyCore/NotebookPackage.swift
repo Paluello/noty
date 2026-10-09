@@ -33,6 +33,10 @@ public struct NotebookPackage: Sendable {
         pagesURL.appending(path: "\(id.uuidString).drawing")
     }
 
+    func elementsURL(_ id: UUID) -> URL {
+        pagesURL.appending(path: "\(id.uuidString).json")
+    }
+
     /// Creates a new notebook package at `url` and writes its manifest.
     @discardableResult
     public static func create(at url: URL, manifest: NotebookManifest) throws -> NotebookPackage {
@@ -72,10 +76,66 @@ public struct NotebookPackage: Sendable {
         try data.write(to: pageURL(id), options: .atomic)
     }
 
-    /// Copies a page's drawing to a new page id (used to duplicate pages).
+    /// Copies a page's drawing and elements to a new page id (used to duplicate pages).
     public func copyPage(_ source: UUID, to destination: UUID) throws {
         if let data = try readPage(source) {
             try writePage(destination, data: data)
+        }
+        let elements = try readElements(source)
+        if !elements.isEmpty {
+            try writeElements(elements, page: destination)
+        }
+    }
+
+    // MARK: - Text boxes and images (ADR-0014)
+
+    public func readElements(_ page: UUID) throws -> [PageElement] {
+        let url = elementsURL(page)
+        guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else { return [] }
+        return try JSONDecoder().decode([PageElement].self, from: Data(contentsOf: url))
+    }
+
+    /// Saves the page's elements; an empty list removes the file.
+    public func writeElements(_ elements: [PageElement], page: UUID) throws {
+        let url = elementsURL(page)
+        if elements.isEmpty {
+            if FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
+                try FileManager.default.removeItem(at: url)
+            }
+            return
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(elements).write(to: url, options: .atomic)
+    }
+
+    /// Stores an image inserted on a page and returns its file name in `assets/`.
+    public func writeAsset(_ data: Data, fileExtension: String) throws -> String {
+        try FileManager.default.createDirectory(at: assetsURL, withIntermediateDirectories: true)
+        let fileName = "image-\(UUID().uuidString).\(fileExtension.lowercased())"
+        try data.write(to: assetsURL.appending(path: fileName), options: .atomic)
+        return fileName
+    }
+
+    public func assetURL(_ fileName: String) -> URL {
+        assetsURL.appending(path: fileName)
+    }
+
+    /// Makes sure every file of the notebook is on this device before opening
+    /// it: in iCloud Drive or other cloud folders, files may be placeholders.
+    /// A coordinated read waits for the download (ADR-0018).
+    public func prepareForReading() throws {
+        var coordinationError: NSError?
+        var readError: Error?
+        NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) { _ in
+            do {
+                _ = try FileManager.default.contentsOfDirectory(at: pagesURL, includingPropertiesForKeys: nil)
+            } catch {
+                readError = error
+            }
+        }
+        if let error = coordinationError ?? readError {
+            throw error
         }
     }
 
@@ -103,9 +163,8 @@ public struct NotebookPackage: Sendable {
     }
 
     public func deletePage(_ id: UUID) throws {
-        let pageURL = pageURL(id)
-        if FileManager.default.fileExists(atPath: pageURL.path(percentEncoded: false)) {
-            try FileManager.default.removeItem(at: pageURL)
+        for url in [pageURL(id), elementsURL(id)] where FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
+            try FileManager.default.removeItem(at: url)
         }
     }
 

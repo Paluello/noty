@@ -16,6 +16,9 @@ enum SettingsKey {
     static let floatingToolbarY = "floatingToolbarY"
     static let pencilTapAction = "pencilTapAction"
     static let pencilSqueezeAction = "pencilSqueezeAction"
+    static let shapeRecognition = "shapeRecognition"
+    static let appLock = "appLock"
+    static let libraryBookmark = "libraryBookmark"
 }
 
 /// Where the editor toolbar sits (UI-1).
@@ -110,6 +113,7 @@ enum EditorPreferences {
         model.autoNewPage = defaults.object(forKey: SettingsKey.autoNewPage) as? Bool ?? true
         model.pencilTapAction = defaults.string(forKey: SettingsKey.pencilTapAction).flatMap(PencilAction.init(rawValue:)) ?? .system
         model.pencilSqueezeAction = defaults.string(forKey: SettingsKey.pencilSqueezeAction).flatMap(PencilAction.init(rawValue:)) ?? .system
+        model.shapeRecognition = defaults.object(forKey: SettingsKey.shapeRecognition) as? Bool ?? true
     }
 
     static func save(from model: EditorModel) {

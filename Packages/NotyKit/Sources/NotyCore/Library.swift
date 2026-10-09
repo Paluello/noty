@@ -80,10 +80,16 @@ public struct Library: Sendable {
     public func contents(of folder: URL) throws -> [LibraryEntry] {
         let urls = try fm.contentsOfDirectory(
             at: folder,
-            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
-            options: [.skipsHiddenFiles]
+            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey]
         )
-        return urls.compactMap(Self.item(at:))
+        // In iCloud Drive, items not yet on this device show up as hidden
+        // ".Name.icloud" placeholders: ask for them, they appear on a later refresh.
+        for url in urls where url.lastPathComponent.hasPrefix(".") && url.pathExtension == "icloud" {
+            try? fm.startDownloadingUbiquitousItem(at: url)
+        }
+        return urls
+            .filter { !$0.lastPathComponent.hasPrefix(".") }
+            .compactMap(Self.item(at:))
     }
 
     static func item(at url: URL) -> LibraryEntry? {
@@ -174,6 +180,7 @@ public struct Library: Sendable {
         title: String,
         in parent: URL,
         paper: PaperStyle,
+        paperColor: PaperColor = .white,
         orientation: PageOrientation = .portrait,
         cover: Cover = .randomColor()
     ) throws -> NotebookPackage {
@@ -182,6 +189,7 @@ public struct Library: Sendable {
             title: url.deletingPathExtension().lastPathComponent,
             cover: cover,
             paper: paper,
+            paperColor: paperColor,
             orientation: orientation
         )
         return try NotebookPackage.create(at: url, manifest: manifest)

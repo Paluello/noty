@@ -171,6 +171,26 @@
         }
       }
     },
+    "Change the lock setting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia l'impostazione di blocco"
+          }
+        }
+      }
+    },
+    "Choose a Folder…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli una cartella…"
+          }
+        }
+      }
+    },
     "Color %lld": {
       "localizations": {
         "it": {
@@ -187,6 +207,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Colori"
+          }
+        }
+      }
+    },
+    "Copy Notebooks": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia i quaderni"
+          }
+        }
+      }
+    },
+    "Copy your notebooks to the new folder?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiare i quaderni nella nuova cartella?"
           }
         }
       }
@@ -337,6 +377,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "I quaderni eliminati restano qui per 30 giorni."
+          }
+        }
+      }
+    },
+    "Don't Copy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non copiare"
           }
         }
       }
@@ -521,6 +571,16 @@
         }
       }
     },
+    "Gray": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grigia"
+          }
+        }
+      }
+    },
     "Grid": {
       "localizations": {
         "it": {
@@ -541,6 +601,16 @@
         }
       }
     },
+    "Insert Image": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci immagine"
+          }
+        }
+      }
+    },
     "Insert Page After": {
       "localizations": {
         "it": {
@@ -557,6 +627,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gli elementi vengono eliminati definitivamente dopo 30 giorni."
+          }
+        }
+      }
+    },
+    "Ivory": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avorio"
+          }
+        }
+      }
+    },
+    "Keep your notebooks in a folder of iCloud Drive, a NAS or another cloud to have them on every device. Noty asks whether to copy the current notebooks there.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni i quaderni in una cartella di iCloud Drive, di un NAS o di un altro cloud per averli su tutti i dispositivi. Noty ti chiede se copiarci i quaderni attuali."
           }
         }
       }
@@ -601,6 +691,16 @@
         }
       }
     },
+    "Library Location": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posizione della libreria"
+          }
+        }
+      }
+    },
     "License": {
       "localizations": {
         "it": {
@@ -627,6 +727,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Righe"
+          }
+        }
+      }
+    },
+    "Lock": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocca"
+          }
+        }
+      }
+    },
+    "Lock Noty with Face ID": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocca Noty con Face ID"
+          }
+        }
+      }
+    },
+    "Locked": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloccato"
           }
         }
       }
@@ -821,12 +951,32 @@
         }
       }
     },
+    "Noty can't use this folder.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noty non riesce a usare questa cartella."
+          }
+        }
+      }
+    },
     "Noty is free and open source. No accounts, no ads, no tracking.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Noty è gratuita e open source. Niente account, niente pubblicità, nessun tracciamento."
+          }
+        }
+      }
+    },
+    "Noty is locked": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noty è bloccata"
           }
         }
       }
@@ -841,12 +991,32 @@
         }
       }
     },
+    "On this iPad": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo iPad"
+          }
+        }
+      }
+    },
     "Open in New Window": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Apri in una nuova finestra"
+          }
+        }
+      }
+    },
+    "Open the locked notebook": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri il quaderno bloccato"
           }
         }
       }
@@ -981,12 +1151,32 @@
         }
       }
     },
+    "Privacy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        }
+      }
+    },
     "Recents": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Recenti"
+          }
+        }
+      }
+    },
+    "Recognize Shapes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riconosci le forme"
           }
         }
       }
@@ -1051,12 +1241,32 @@
         }
       }
     },
+    "Scan Document": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scansiona documento"
+          }
+        }
+      }
+    },
     "Search notebooks and folders": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Cerca quaderni e cartelle"
+          }
+        }
+      }
+    },
+    "Set a passcode in the iPad's Settings to use the lock.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imposta un codice nelle Impostazioni dell'iPad per usare il blocco."
           }
         }
       }
@@ -1077,6 +1287,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mostra o nascondi il righello"
+          }
+        }
+      }
+    },
+    "Single notebooks can be locked from their menu. Locking hides notebooks inside Noty; the files stay readable from the Files app.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puoi bloccare i singoli quaderni dal loro menu. Il blocco li nasconde dentro Noty; i file restano leggibili dall'app File."
           }
         }
       }
@@ -1147,6 +1367,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "Passa alla gomma"
+          }
+        }
+      }
+    },
+    "Sync": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizzazione"
+          }
+        }
+      }
+    },
+    "Tap the page to add a text box. Drag to move, use the corner to resize.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocca la pagina per aggiungere una casella di testo. Trascina per spostare, usa l'angolo per ridimensionare."
+          }
+        }
+      }
+    },
+    "Text and Images": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testo e immagini"
+          }
+        }
+      }
+    },
+    "The new paper applies to every page. Your writing stays as it is.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La nuova carta vale per tutte le pagine. Quello che hai scritto resta com'è."
+          }
+        }
+      }
+    },
+    "The notebooks on this iPad stay where they are.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I quaderni su questo iPad restano dove sono."
           }
         }
       }
@@ -1231,6 +1501,36 @@
         }
       }
     },
+    "Unlock": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sblocca"
+          }
+        }
+      }
+    },
+    "Unlock Noty": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sblocca Noty"
+          }
+        }
+      }
+    },
+    "Unlock the notebook": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sblocca il quaderno"
+          }
+        }
+      }
+    },
     "Untitled – %@": {
       "localizations": {
         "it": {
@@ -1241,12 +1541,32 @@
         }
       }
     },
+    "Use This iPad's Storage": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa la memoria dell'iPad"
+          }
+        }
+      }
+    },
     "Version": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Versione"
+          }
+        }
+      }
+    },
+    "White": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bianca"
           }
         }
       }
@@ -1277,6 +1597,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Se la scrittura con le dita è disattivata, scrive solo Apple Pencil e con le dita scorri e ingrandisci. Scrivendo in fondo all'ultima pagina ne viene aggiunta una nuova."
+          }
+        }
+      }
+    },
+    "With finger drawing off, only Apple Pencil writes and fingers scroll and zoom. Writing near the bottom of the last page adds a new one. To draw a perfect line, circle or rectangle, hold the Pencil still at the end of the stroke.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se la scrittura con le dita è disattivata, scrive solo Apple Pencil e con le dita scorri e ingrandisci. Scrivendo in fondo all'ultima pagina ne viene aggiunta una nuova. Per una linea, un cerchio o un rettangolo perfetti, tieni ferma la Pencil alla fine del tratto."
           }
         }
       }

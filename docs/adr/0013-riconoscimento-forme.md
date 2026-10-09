@@ -9,3 +9,6 @@ Rileviamo quando la Pencil resta ferma per circa 0,5 s a fine tratto; classifich
 
 ## Conseguenze
 + Nessuna dipendenza esterna. − Va calibrato con test reali; si può disattivare.
+
+## Nota di implementazione (0.3)
+PencilKit non aggiunge punti mentre la Pencil sta ferma, quindi la pausa finale si misura anche come **intervallo tra l'ultimo punto e il sollevamento** (`canvasViewDidEndUsingTool`). Forme riconosciute: linea (raddrizzata se quasi orizzontale o verticale), ellisse, triangolo, rettangolo (squadrato se quasi allineato agli assi), altri quadrilateri. Le soglie sono nei test di `ShapeRecognizerTests` e vanno tarate su iPad vero.

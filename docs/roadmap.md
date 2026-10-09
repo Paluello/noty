@@ -31,3 +31,10 @@ Da fare prima di chiudere la 0.1:
 Implementato: Preferiti e Recenti nella barra laterale, ricerca in tutta la libreria (anche nelle sottocartelle, senza badare a maiuscole e accenti), ordinamento, righello, doppio tocco e squeeze della Pencil configurabili, barra degli strumenti in alto / a sinistra / a destra / flottante, modalità concentrazione, quaderni in finestre separate (Split View, Stage Manager), "Esporta tutto" in zip, etichette per VoiceOver.
 
 Da verificare su iPad vero: gesti della Pencil, righello, barra laterale in orizzontale, finestre multiple.
+
+## Stato della 0.3
+Implementato: caselle di testo e immagini (da Foto, File o scansione di documenti), riconoscimento delle forme, colore della carta e cambio della carta di un quaderno esistente, blocco con Face ID (dell'app intera o del singolo quaderno), libreria in una cartella a scelta: iCloud Drive, NAS… (ADR-0018, sostituisce ADR-0009).
+
+Provato nel simulatore: casella di testo, linea storta raddrizzata. Coperto dai test: forme, formato degli elementi, compatibilità con i quaderni vecchi.
+Da verificare su iPad vero: cerchi e rettangoli con la Pencil, Face ID, scansione documenti, sincronizzazione con iCloud Drive e NAS.
+Limiti noti: niente annulla per testo e immagini; nessuna unione di modifiche fatte in contemporanea su due dispositivi.
