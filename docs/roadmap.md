@@ -14,5 +14,6 @@
 ## Prima di scrivere codice (milestone 0)
 - [x] Rispondere alle [domande aperte](open-questions.md)
 - [x] Accettare o modificare gli ADR proposti
-- [ ] Creare il repository GitHub, la licenza, i template e la CI
-- [ ] Prototipo "spike": 50 pagine A4 con PencilKit che scorrono fluide (convalida ADR-0006)
+- [x] Repository git locale, licenza GPL, template
+- [ ] Pubblicazione su GitHub e CI
+- [ ] Prototipo "spike": 50 pagine A4 con PencilKit che scorrono fluide (convalida ADR-0006). Funziona nel simulatore; resta da provare su un iPad vero con la Pencil
