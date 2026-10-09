@@ -15,5 +15,14 @@
 - [x] Rispondere alle [domande aperte](open-questions.md)
 - [x] Accettare o modificare gli ADR proposti
 - [x] Repository git locale, licenza GPL, template
-- [ ] Pubblicazione su GitHub e CI
-- [ ] Prototipo "spike": 50 pagine A4 con PencilKit che scorrono fluide (convalida ADR-0006). Funziona nel simulatore; resta da provare su un iPad vero con la Pencil
+- [x] Repository privato su GitHub
+- [ ] CI (GitHub Actions)
+- [x] Prototipo "spike": 50 pagine A4 con PencilKit (ADR-0006). Funziona nel simulatore; resta da provare su un iPad vero con la Pencil
+
+## Stato della 0.1 (9 ottobre 2026)
+Implementata e provata nel simulatore: libreria con cartelle e sottocartelle, griglia con copertine, nuovo quaderno (carta, orientamento, copertina a colori, foto o file), rinomina/sposta/duplica/elimina con Cestino, editor con barra Liquid Glass, 5 strumenti, palette da 8 colori personalizzabili, 3 spessori per strumento, gomma parziale o a tratto intero, annulla/ripeti, gestione pagine, nuova pagina automatica, esportazione PDF, impostazioni, tema chiaro/scuro, italiano e inglese.
+
+Da fare prima di chiudere la 0.1:
+- [ ] Prova su iPad vero con Apple Pencil (fluidità, nitidezza dello zoom, gesti a due/tre dita)
+- [ ] Icona dell'app
+- [ ] CI con test automatici

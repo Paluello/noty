@@ -24,6 +24,10 @@ public struct NotebookPackage: Sendable {
 
     var manifestURL: URL { url.appending(path: "notebook.json") }
     var pagesURL: URL { url.appending(path: "pages", directoryHint: .isDirectory) }
+    var assetsURL: URL { url.appending(path: "assets", directoryHint: .isDirectory) }
+
+    /// PDF copy of the whole notebook, readable without Noty (ADR-0004).
+    public var snapshotURL: URL { url.appending(path: "snapshot.pdf") }
 
     func pageURL(_ id: UUID) -> URL {
         pagesURL.appending(path: "\(id.uuidString).drawing")
@@ -66,6 +70,36 @@ public struct NotebookPackage: Sendable {
 
     public func writePage(_ id: UUID, data: Data) throws {
         try data.write(to: pageURL(id), options: .atomic)
+    }
+
+    /// Copies a page's drawing to a new page id (used to duplicate pages).
+    public func copyPage(_ source: UUID, to destination: UUID) throws {
+        if let data = try readPage(source) {
+            try writePage(destination, data: data)
+        }
+    }
+
+    // MARK: - Cover image (ORG-9)
+
+    /// Stores an image as the cover and returns the matching `Cover` value.
+    public func writeCoverImage(_ data: Data, fileExtension: String) throws -> Cover {
+        try FileManager.default.createDirectory(at: assetsURL, withIntermediateDirectories: true)
+        // A new name each time, so views showing the old cover notice the change.
+        let fileName = "cover-\(UUID().uuidString.prefix(8)).\(fileExtension.lowercased())"
+        try data.write(to: assetsURL.appending(path: fileName), options: .atomic)
+        return .image(fileName: fileName)
+    }
+
+    public func coverImageURL(_ fileName: String) -> URL {
+        assetsURL.appending(path: fileName)
+    }
+
+    /// Removes cover images that the manifest no longer uses.
+    public func removeUnusedCoverImages(keeping cover: Cover) {
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: assetsURL.path(percentEncoded: false))) ?? []
+        for file in files where file.hasPrefix("cover-") && cover != .image(fileName: file) {
+            try? FileManager.default.removeItem(at: assetsURL.appending(path: file))
+        }
     }
 
     public func deletePage(_ id: UUID) throws {

@@ -1,0 +1,14 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "copy" : {
+      "comment" : "Suffix added to the name of a duplicated notebook or folder",
+      "localizations" : { "it" : { "stringUnit" : { "state" : "translated", "value" : "copia" } } }
+    },
+    "Untitled" : {
+      "comment" : "Default name for a notebook or folder",
+      "localizations" : { "it" : { "stringUnit" : { "state" : "translated", "value" : "Senza titolo" } } }
+    }
+  },
+  "version" : "1.0"
+}

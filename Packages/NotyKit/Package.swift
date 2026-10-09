@@ -11,9 +11,10 @@ let package = Package(
     ],
     targets: [
         // Model and .noty file format. No UI dependencies (ADR-0002, ADR-0016).
-        .target(name: "NotyCore"),
+        .target(name: "NotyCore", resources: [.process("Resources")]),
         // Notebook editor: PencilKit canvases, paper, tools.
         .target(name: "NotyCanvas", dependencies: ["NotyCore"]),
         .testTarget(name: "NotyCoreTests", dependencies: ["NotyCore"]),
+        .testTarget(name: "NotyCanvasTests", dependencies: ["NotyCanvas", "NotyCore"]),
     ]
 )

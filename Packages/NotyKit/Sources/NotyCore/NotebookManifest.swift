@@ -40,7 +40,7 @@ public enum Cover: Codable, Hashable, Sendable {
 }
 
 /// Contents of `notebook.json` (ADR-0004).
-public struct NotebookManifest: Codable, Equatable, Sendable {
+public struct NotebookManifest: Codable, Hashable, Sendable {
     public static let currentFormatVersion = 1
 
     public var formatVersion: Int

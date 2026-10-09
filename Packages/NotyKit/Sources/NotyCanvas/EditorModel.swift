@@ -16,17 +16,27 @@ public enum ToolKind: String, CaseIterable, Identifiable, Sendable {
         case .lasso: "lasso"
         }
     }
+
+    /// Tools that draw with a color and a width.
+    public var isInking: Bool {
+        switch self {
+        case .pen, .pencil, .highlighter: true
+        case .eraser, .lasso: false
+        }
+    }
 }
 
 public enum EraserMode: String, CaseIterable, Sendable {
-    /// Removes whole strokes.
-    case stroke
     /// Removes only the touched part of a stroke.
     case partial
+    /// Removes whole strokes.
+    case stroke
 }
 
 /// The standard 8-color palette (STR-5).
 public enum Palette {
+    public static let size = 8
+
     public static let standard: [UIColor] = [
         .black,
         UIColor(red: 0.42, green: 0.45, blue: 0.50, alpha: 1), // gray
@@ -39,35 +49,74 @@ public enum Palette {
     ]
 }
 
-/// Editor state shared between the SwiftUI toolbar and the UIKit canvas.
+/// Editor state shared between the SwiftUI chrome and the UIKit canvas.
 @MainActor @Observable
 public final class EditorModel {
     public var tool: ToolKind = .pen
     public var colorIndex = 0
     public var palette = Palette.standard
     public var eraserMode: EraserMode = .partial
-    public var widths: [ToolKind: CGFloat] = [.pen: 2.5, .pencil: 3, .highlighter: 18]
 
-    public internal(set) var pageCount = 0
+    /// Three preferred widths per inking tool (STR-6).
+    public var widthPresets: [ToolKind: [CGFloat]] = [
+        .pen: [1.5, 2.5, 5],
+        .pencil: [2, 3.5, 7],
+        .highlighter: [10, 18, 30],
+    ]
+    public var widthIndex: [ToolKind: Int] = [.pen: 1, .pencil: 1, .highlighter: 1]
+
+    /// When `false`, only Apple Pencil draws and fingers scroll and zoom (ADR-0008).
+    public var fingerDrawing = false
+    /// Writing near the bottom of the last page adds a new page.
+    public var autoNewPage = true
+    /// Space covered by the floating toolbar above the pages.
+    public var topContentInset: CGFloat = 0
+
+    public internal(set) var pageIDs: [UUID] = []
     public internal(set) var currentPage = 1
+    public internal(set) var revision = 0
 
     weak var canvasController: NotebookCanvasViewController?
 
     public init() {}
 
-    public var color: UIColor { palette[colorIndex] }
+    public var pageCount: Int { pageIDs.count }
+    public var color: UIColor { palette[min(colorIndex, palette.count - 1)] }
+
+    public func width(for tool: ToolKind) -> CGFloat {
+        let presets = widthPresets[tool] ?? [3]
+        return presets[min(widthIndex[tool] ?? 0, presets.count - 1)]
+    }
+
+    // MARK: - Commands
 
     public func undo() { canvasController?.undo() }
     public func redo() { canvasController?.redo() }
-    public func addPage() { canvasController?.appendPage(scrollToIt: true) }
+    public func save() { canvasController?.saveNow() }
+    public func scrollToPage(_ index: Int) { canvasController?.scrollToPage(index, animated: true) }
+
+    public func addPageAtEnd() { canvasController?.insertPage(at: pageCount, scrollToIt: true) }
+    public func insertPage(after index: Int) { canvasController?.insertPage(at: index + 1, scrollToIt: false) }
+    public func duplicatePage(at index: Int) { canvasController?.duplicatePage(at: index) }
+    public func deletePage(at index: Int) { canvasController?.deletePage(at: index) }
+    public func movePage(from source: Int, to destination: Int) { canvasController?.movePage(from: source, to: destination) }
 
     var pkTool: PKTool {
         switch tool {
-        case .pen: PKInkingTool(.pen, color: color, width: widths[.pen] ?? 2.5)
-        case .pencil: PKInkingTool(.pencil, color: color, width: widths[.pencil] ?? 3)
-        case .highlighter: PKInkingTool(.marker, color: color, width: widths[.highlighter] ?? 18)
+        case .pen: PKInkingTool(.pen, color: color, width: width(for: .pen))
+        case .pencil: PKInkingTool(.pencil, color: color, width: width(for: .pencil))
+        case .highlighter: PKInkingTool(.marker, color: color, width: width(for: .highlighter))
         case .eraser: PKEraserTool(eraserMode == .stroke ? .vector : .bitmap)
         case .lasso: PKLassoTool()
         }
+    }
+
+    var drawingPolicy: PKCanvasViewDrawingPolicy {
+        #if targetEnvironment(simulator)
+        // There is no Pencil in the simulator: let the mouse draw.
+        .anyInput
+        #else
+        fingerDrawing ? .anyInput : .pencilOnly
+        #endif
     }
 }

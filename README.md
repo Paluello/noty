@@ -11,7 +11,7 @@ App per prendere appunti a mano su iPad, **semplice, gratuita, senza pubblicità
 - **Nativa Apple**: SwiftUI + PencilKit, aspetto minimal coerente con iPadOS.
 
 ## Stato
-Fase di progettazione. Vedi [roadmap](docs/roadmap.md).
+Versione 0.1 in sviluppo: le funzioni base ci sono, mancano le prove su iPad vero. Vedi [roadmap](docs/roadmap.md).
 
 ## Documentazione
 | Documento | Contenuto |
@@ -24,10 +24,11 @@ Fase di progettazione. Vedi [roadmap](docs/roadmap.md).
 | [Architettura](docs/architecture.md) | Moduli, dati, formato dei file |
 | [ADR](docs/adr/README.md) | Registro delle decisioni |
 | [Roadmap](docs/roadmap.md) | Milestone |
+| [Formato dei file](docs/file-format.md) | Com'è fatto un quaderno `.noty` |
 | [Domande aperte](docs/open-questions.md) | Cose ancora da decidere |
 
 ## Installazione (quando ci sarà una build)
-- **Da sorgente**: Xcode su Mac, poi Run su un iPad collegato.
+- **Da sorgente**: apri `Noty.xcodeproj` con Xcode 26, scegli un iPad (o il simulatore) e premi Run. Test: `cd Packages/NotyKit && xcodebuild test -scheme NotyKit-Package -destination 'platform=iOS Simulator,name=<iPad>'`.
 - **AltStore**: file `.ipa` allegato a ogni release su GitHub.
 
 ## Contribuire

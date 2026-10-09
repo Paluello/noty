@@ -8,7 +8,9 @@ Grazie! Prima di iniziare:
 
 ## Setup
 - Xcode (ultima versione stabile), macOS recente
-- `git clone https://github.com/paluello/noty.git` → apri `Noty.xcodeproj` → scheme `Noty` → iPad simulator
+- `git clone https://github.com/paluello/noty.git` → apri `Noty.xcodeproj` → scheme `Noty` → simulatore iPad
+- Codice: `Packages/NotyKit` (`NotyCore` dati e formato, `NotyCanvas` editor) e `Noty/` (interfaccia SwiftUI)
+- Le stringhe dell'interfaccia stanno in `Noty/Localizable.xcstrings`
 
 ## Regole
 - Codice e commit in inglese; stile Swift API Design Guidelines, `swift-format`
