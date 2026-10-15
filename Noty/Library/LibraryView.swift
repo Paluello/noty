@@ -1,33 +1,78 @@
 import NotyCore
 import SwiftUI
 
-enum SidebarSelection: Hashable {
-    case folder(URL)
+/// The sections of the home screen: tabs at the top, or a sidebar (UI-1, UI-4).
+enum LibraryTab: Hashable {
+    case library
     case favorites
     case recents
+    case folder(URL)
     case trash
+    case search
 }
 
-/// Home screen: folder tree on the side, folder contents as a grid (screen 1).
+/// Home screen. Like Apple Music on iPadOS 26: a Liquid Glass tab bar at the
+/// top that turns into a sidebar (with folders and Trash) and back.
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(\.openWindow) private var openWindow
     @Environment(\.scenePhase) private var scenePhase
-    /// The folder or list chosen in the sidebar: the root of the detail column.
-    @State private var selection: SidebarSelection?
-    /// Subfolders opened from the grid, below the selected folder.
+    @State private var tab = LibraryTab.library
+    /// Subfolders opened from the grid, below the selected tab.
     @State private var path: [URL] = []
     @State private var openNotebook: SharedFile?
     @State private var isShowingSettings = false
 
     var body: some View {
         @Bindable var store = store
-        NavigationSplitView {
-            sidebar
-        } detail: {
-            detail(for: selection ?? .folder(store.root))
+        let folders = store.folderTree().children
+        TabView(selection: $tab) {
+            Tab("Library", systemImage: "books.vertical", value: LibraryTab.library) {
+                grid(.folder(store.root))
+            }
+            Tab("Favorites", systemImage: "star", value: LibraryTab.favorites) {
+                grid(.favorites)
+            }
+            Tab("Recents", systemImage: "clock", value: LibraryTab.recents) {
+                grid(.recents)
+            }
+
+            // Folders and Trash live in the sidebar; the tab bar stays short.
+            TabSection("Folders") {
+                ForEach(folders) { folder in
+                    Tab(folder.name, systemImage: "folder", value: LibraryTab.folder(folder.url)) {
+                        grid(.folder(folder.url))
+                    }
+                }
+            }
+            .defaultVisibility(.hidden, for: .tabBar)
+
+            Tab("Trash", systemImage: "trash", value: LibraryTab.trash) {
+                NavigationStack {
+                    TrashView()
+                }
+            }
+            .defaultVisibility(.hidden, for: .tabBar)
+
+            Tab(value: LibraryTab.search, role: .search) {
+                grid(.search)
+            }
         }
-        .onChange(of: selection) { path = [] }
+        .tabViewStyle(.sidebarAdaptable)
+        .tabViewSidebarHeader {
+            Text(verbatim: "Noty")
+                .font(.largeTitle.bold())
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .tabViewSidebarBottomBar {
+            Button("Settings", systemImage: "gearshape") {
+                isShowingSettings = true
+            }
+            .buttonStyle(.glass)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .onChange(of: tab) { path = [] }
+        .environment(\.showSettings) { isShowingSettings = true }
         .environment(\.openNotebook) { url in open(url, inNewWindow: false) }
         .environment(\.openNotebookAtPage) { url, page in open(url, inNewWindow: false, page: page) }
         .environment(\.openNotebookInNewWindow) { url in open(url, inNewWindow: true) }
@@ -52,24 +97,7 @@ struct LibraryView: View {
         }
     }
 
-    @ViewBuilder
-    private func detail(for selection: SidebarSelection) -> some View {
-        switch selection {
-        case .trash:
-            NavigationStack {
-                TrashView()
-            }
-        case .folder(let folder):
-            grid(.folder(folder))
-        case .favorites:
-            grid(.favorites)
-        case .recents:
-            grid(.recents)
-        }
-    }
-
-    /// A new stack per sidebar item: the split view resets the detail stack
-    /// whenever the sidebar selection changes.
+    /// One navigation stack per tab: subfolders open inside it.
     private func grid(_ source: GridSource) -> some View {
         NavigationStack(path: $path) {
             FolderGridView(source: source, path: $path)
@@ -97,48 +125,6 @@ struct LibraryView: View {
                 openWindow(value: url)
             } else {
                 openNotebook = SharedFile(url: url, page: page)
-            }
-        }
-    }
-
-    private var sidebar: some View {
-        let tree = store.folderTree()
-        return List(selection: $selection) {
-            Section {
-                Label("Library", systemImage: "books.vertical")
-                    .dropDestination(for: URL.self) { urls, _ in
-                        urls.forEach { store.move(url: $0, to: store.root) }
-                        return true
-                    }
-                    .tag(SidebarSelection.folder(store.root))
-                Label("Favorites", systemImage: "star")
-                    .tag(SidebarSelection.favorites)
-                Label("Recents", systemImage: "clock")
-                    .tag(SidebarSelection.recents)
-            }
-            if let folders = tree.childrenOrNil {
-                Section("Folders") {
-                    OutlineGroup(folders, children: \.childrenOrNil) { node in
-                        Label(node.name, systemImage: "folder")
-                            .dropDestination(for: URL.self) { urls, _ in
-                                urls.forEach { store.move(url: $0, to: node.url) }
-                                return true
-                            }
-                            .tag(SidebarSelection.folder(node.url))
-                    }
-                }
-            }
-            Section {
-                Label("Trash", systemImage: "trash")
-                    .tag(SidebarSelection.trash)
-            }
-        }
-        .navigationTitle("Noty")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button("Settings", systemImage: "gearshape") {
-                    isShowingSettings = true
-                }
             }
         }
     }

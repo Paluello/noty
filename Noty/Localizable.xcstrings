@@ -551,6 +551,16 @@
         }
       }
     },
+    "Find notebooks and folders by name, and words written by hand.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trova quaderni e cartelle per nome e le parole scritte a mano."
+          }
+        }
+      }
+    },
     "Floating": {
       "localizations": {
         "it": {
@@ -1367,6 +1377,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Scansiona documento"
+          }
+        }
+      }
+    },
+    "Search": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca"
+          }
+        }
+      }
+    },
+    "Search Your Notes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca nei tuoi appunti"
           }
         }
       }

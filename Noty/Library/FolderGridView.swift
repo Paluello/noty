@@ -7,6 +7,8 @@ enum GridSource: Hashable {
     case folder(URL)
     case favorites
     case recents
+    /// The Search tab: the whole library, by name and inside handwriting (ORG-7, ORG-8).
+    case search
 }
 
 /// A grid of folders and notebooks (ORG-3), with search across the whole library (ORG-7).
@@ -18,6 +20,7 @@ struct FolderGridView: View {
     @Environment(\.openNotebook) private var openNotebook
     @Environment(\.openNotebookInNewWindow) private var openNotebookInNewWindow
     @Environment(\.openNotebookAtPage) private var openNotebookAtPage
+    @Environment(\.showSettings) private var showSettings
     @AppStorage(SettingsKey.sortOrder) private var sortOrder = SortOrder.modified
 
     @State private var query = ""
@@ -46,6 +49,7 @@ struct FolderGridView: View {
         case .folder(let url): return store.items(in: url, sortedBy: sortOrder)
         case .favorites: return store.favorites(sortedBy: sortOrder)
         case .recents: return store.recents()
+        case .search: return []
         }
     }
 
@@ -98,7 +102,7 @@ struct FolderGridView: View {
             }
         }
         .navigationTitle(title)
-        .searchable(text: $query, prompt: Text("Search notebooks and folders"))
+        .modifier(SearchField(isEnabled: source == .search, query: $query))
         .toolbar { toolbar }
         .sheet(isPresented: $isCreatingNotebook) {
             NewNotebookSheet(folder: folder ?? store.root) { package in
@@ -139,6 +143,7 @@ struct FolderGridView: View {
         case .folder(let url): store.displayName(of: url)
         case .favorites: String(localized: "Favorites")
         case .recents: String(localized: "Recents")
+        case .search: String(localized: "Search")
         }
     }
 
@@ -235,7 +240,12 @@ struct FolderGridView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        if source != .recents {
+        if path.isEmpty {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Settings", systemImage: "gearshape", action: showSettings)
+            }
+        }
+        if source != .recents && source != .search {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Picker("Sort By", selection: $sortOrder) {
@@ -288,6 +298,8 @@ struct FolderGridView: View {
                 ContentUnavailableView("No Favorites", systemImage: "star", description: Text("Touch and hold a notebook, then choose Add to Favorites."))
             case .recents:
                 ContentUnavailableView("No Recent Notebooks", systemImage: "clock", description: Text("Notebooks you open appear here."))
+            case .search:
+                ContentUnavailableView("Search Your Notes", systemImage: "magnifyingglass", description: Text("Find notebooks and folders by name, and words written by hand."))
             }
         }
     }
@@ -391,5 +403,19 @@ struct FolderTile: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Folder \(name)"))
         .accessibilityValue(Text("\(count) items"))
+    }
+}
+
+/// The search field, only on the Search tab: in the tab bar it sits like Apple Music's.
+private struct SearchField: ViewModifier {
+    let isEnabled: Bool
+    @Binding var query: String
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.searchable(text: $query, prompt: Text("Search notebooks and folders"))
+        } else {
+            content
+        }
     }
 }

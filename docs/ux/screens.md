@@ -1,24 +1,22 @@
 # Schermate
 
 ## 1. Libreria (schermata iniziale)
+Come Apple Music su iPadOS 26: una **barra delle sezioni in vetro**, in alto al centro, che con un pulsante diventa una **barra laterale** e torna indietro.
 ```
-┌───────────────┬──────────────────────────────────────────┐
-│ ★ Preferiti    │  Studio › Università                [⋯] │
-│ 🕘 Recenti     │  [Ordina ▾]                      [+ Nuovo] │
-│ ───────────── │  ┌────┐ ┌────┐ ┌────┐ ┌────┐            │
-│ 📁 Studio      │  │ 📁 │ │▤▤▤│ │▦▦▦│ │···│            │
-│   📁 Università │  └────┘ └────┘ └────┘ └────┘            │
-│   📁 Lingue    │  Esami  Analisi Fisica  Inglese          │
-│ 📁 Personale   │         12 pag. 3 pag.  8 pag.           │
-│ 🗑 Cestino      │                                          │
-│ ⚙ Impostazioni│                                          │
-└───────────────┴──────────────────────────────────────────┘
+ ⚙︎        ╭──────────────────────────────────────────╮      ⇅  ＋
+          │ ▯  Libreria   Preferiti   Recenti   🔍 │
+          ╰──────────────────────────────────────────╯
+ Libreria
+ ┌────┐ ┌────┐ ┌────┐ ┌────┐
+ │ 📁 │ │ 📁 │ │▤▤▤│ │▦▦▦│
+ └────┘ └────┘ └────┘ └────┘
+ Lingue  Uni…  Analisi Fisica
 ```
-- La **barra laterale** (si può nascondere) mostra Preferiti, Recenti, l'albero delle cartelle, il Cestino e le Impostazioni.
-- La **griglia** mostra prima le cartelle e poi i quaderni; ogni quaderno mostra la sua copertina (colore o immagine) con il titolo; si cambia con pressione prolungata → Copertina.
-- **Pressione prolungata** su un elemento: Rinomina, Copertina, Sposta, Duplica, Preferito, Esporta PDF, Blocca, Elimina.
-- **Trascina e rilascia** per spostare un elemento in una cartella.
-- In verticale la barra laterale diventa un pannello a scomparsa.
+- **Barra in alto:** Libreria, Preferiti, Recenti e Cerca (la ricerca sta nella barra, come in Music).
+- **Barra laterale** (pulsante ▯): in più le **Cartelle** di primo livello e il **Cestino**, con **Impostazioni** in fondo.
+- La **griglia** mostra prima le cartelle e poi i quaderni; ogni quaderno mostra la sua copertina (colore o immagine) con il titolo.
+- **Pressione prolungata** su un elemento: Apri in una nuova finestra, Preferito, Blocca, Rinomina, Copertina, Sposta, Duplica, Esporta PDF, Elimina.
+- **Trascina e rilascia** un quaderno su una cartella della griglia per spostarlo.
 
 ## 2. Nuovo quaderno (foglio modale)
 - Nome (proposto in automatico: "Senza titolo – 9 ott")

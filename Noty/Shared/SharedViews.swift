@@ -9,6 +9,8 @@ extension EnvironmentValues {
     @Entry var openNotebookInNewWindow: (URL) -> Void = { _ in }
     /// Opens a notebook at a page, from a handwriting search result (ORG-8).
     @Entry var openNotebookAtPage: (URL, Int) -> Void = { _, _ in }
+    /// Shows the Settings sheet.
+    @Entry var showSettings: () -> Void = {}
 }
 
 /// A small live preview of a paper style, drawn with the same code as the pages.
