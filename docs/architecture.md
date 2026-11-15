@@ -2,7 +2,7 @@
 
 ```
 NotyApp (target iPad)          ── SwiftUI: Libreria, Impostazioni, routing, finestre multiple
- ├── NotyCanvas (package)      ── Editor: tele PencilKit, barra strumenti, lazo, forme, elementi, audio UI
+ ├── NotyCanvas (package)      ── Editor: tela PencilKit unica (ADR-0020), barra strumenti, lazo, forme, elementi, audio UI
  └── NotyCore   (package)      ── Modello, formato .noty, libreria su file system, export PDF, audio engine
                                     (nessuna dipendenza UI → riusabile dal viewer iPhone, ADR-0016)
 ```

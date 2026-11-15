@@ -3,7 +3,7 @@ import NotyCore
 import PhotosUI
 import SwiftUI
 
-/// Screen 3: the notebook editor, with a floating Liquid Glass toolbar.
+/// Screen 3: the notebook editor: a docked two-row bar above a continuous page.
 struct EditorView: View {
     let package: NotebookPackage
     /// Closes the editor; by default it dismisses the full-screen cover.
@@ -24,46 +24,56 @@ struct EditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(LibraryStore.self) private var store
     @Environment(PaletteStore.self) private var palettes
-    @AppStorage(SettingsKey.toolbarPosition) private var position = ToolbarPosition.top
-    @AppStorage(SettingsKey.floatingToolbarX) private var floatingX = 0.0
-    @AppStorage(SettingsKey.floatingToolbarY) private var floatingY = 0.0
     @State private var model = EditorModel()
     @State private var title = ""
     @State private var isFocusMode = false
     @State private var isShowingPages = false
     @State private var isShowingPalettes = false
     @State private var sharedPDF: SharedFile?
-    @State private var toolbarFrame = CGRect.zero
     @State private var imageSource: ImageSource?
     @State private var photoItem: PhotosPickerItem?
     @State private var isShowingPaper = false
     /// Locked notebooks stay covered until Face ID or the passcode (ADR-0012).
     @State private var isUnlocked = false
     @State private var isLocked = false
-    @State private var dragOffset = CGSize.zero
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                Color(uiColor: .secondarySystemBackground)
-                    .ignoresSafeArea()
-
-                NotebookCanvas(package: package, model: model)
-                    .padding(.leading, sideInset(for: .leading))
-                    .padding(.trailing, sideInset(for: .trailing))
-                    .ignoresSafeArea()
-
-                chrome
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: chromeAlignment)
-            }
-            .onChange(of: toolbarFrame) { updateInset(safeTop: proxy.safeAreaInsets.top) }
-            .onChange(of: isFocusMode) { updateInset(safeTop: proxy.safeAreaInsets.top) }
-            .onChange(of: position) { updateInset(safeTop: proxy.safeAreaInsets.top) }
-            .onAppear { updateInset(safeTop: proxy.safeAreaInsets.top) }
-        }
-        .overlay(alignment: .bottomLeading) {
+        // The bar is docked above the page, never over it: nothing covers the
+        // paper and the page does not move when a tool changes.
+        VStack(spacing: 0) {
             if !isFocusMode {
-                pageIndicator
+                EditorToolbar(
+                    model: model,
+                    title: title,
+                    audio: audio,
+                    onClose: close,
+                    onShowPages: showPages,
+                    onShowPalettes: { isShowingPalettes = true },
+                    onExport: exportPDF,
+                    onFocusMode: { isFocusMode = true },
+                    onInsertImage: { imageSource = $0 },
+                    onShowPaper: { isShowingPaper = true },
+                    onRecord: startRecording
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            NotebookCanvas(package: package, model: model)
+                .ignoresSafeArea(edges: isFocusMode ? .all : [.bottom, .horizontal])
+        }
+        .background(Color(uiColor: .secondarySystemBackground).ignoresSafeArea())
+        .overlay(alignment: .topTrailing) {
+            if isFocusMode {
+                Button("Exit Focus Mode", systemImage: "arrow.down.right.and.arrow.up.left") {
+                    isFocusMode = false
+                }
+                .labelStyle(.iconOnly)
+                .font(.title3)
+                .frame(width: 48, height: 48)
+                .contentShape(.circle)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .transition(.opacity)
             }
         }
         .overlay(alignment: .bottom) {
@@ -95,7 +105,6 @@ struct EditorView: View {
                 close()
             }
         }
-        .animation(.snappy, value: position)
         .animation(.snappy, value: isFocusMode)
         .statusBarHidden(isFocusMode)
         .onChange(of: palettes.selectedColors, initial: true) { _, colors in
@@ -162,131 +171,6 @@ struct EditorView: View {
         Binding(get: { imageSource == source }, set: { if !$0 { imageSource = nil } })
     }
 
-    // MARK: - Toolbar placement (UI-1)
-
-    @ViewBuilder
-    private var chrome: some View {
-        if isFocusMode {
-            Button("Exit Focus Mode", systemImage: "arrow.down.right.and.arrow.up.left") {
-                isFocusMode = false
-            }
-            .labelStyle(.iconOnly)
-            .font(.title3)
-            .frame(width: 44, height: 44)
-            .glassEffect(.regular.interactive(), in: .circle)
-            .padding(.horizontal, 16)
-            .transition(.opacity)
-        } else {
-            switch position {
-            case .top:
-                toolbar(axis: .horizontal)
-                    .padding(.horizontal, 16)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            case .leading:
-                toolbar(axis: .vertical)
-                    .padding(.leading, 12)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
-            case .trailing:
-                toolbar(axis: .vertical)
-                    .padding(.trailing, 12)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
-            case .floating:
-                HStack(spacing: 8) {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 48)
-                        .contentShape(.rect)
-                        .gesture(dragGesture)
-                        .accessibilityLabel(Text("Move Toolbar"))
-                    toolbar(axis: .horizontal, isCompact: true)
-                }
-                .padding(.leading, 10)
-                .padding(.trailing, 4)
-                .padding(.vertical, 4)
-                .background(.thinMaterial.opacity(0.001), in: .capsule)
-                .offset(x: floatingX + dragOffset.width, y: floatingY + dragOffset.height)
-                .transition(.opacity)
-            }
-        }
-    }
-
-    private func toolbar(axis: Axis, isCompact: Bool = false) -> some View {
-        EditorToolbar(
-            model: model,
-            axis: axis,
-            isCompact: isCompact,
-            position: $position,
-            onClose: close,
-            onShowPages: showPages,
-            onShowPalettes: { isShowingPalettes = true },
-            onExport: exportPDF,
-            onFocusMode: { isFocusMode = true },
-            onInsertImage: { imageSource = $0 },
-            onShowPaper: { isShowingPaper = true },
-            audio: audio,
-            onRecord: startRecording
-        )
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { toolbarFrame = $0 }
-    }
-
-    private var chromeAlignment: Alignment {
-        if isFocusMode { return .topTrailing }
-        switch position {
-        case .top, .floating: return .top
-        case .leading: return .leading
-        case .trailing: return .trailing
-        }
-    }
-
-    private var dragGesture: some Gesture {
-        DragGesture()
-            .onChanged { dragOffset = $0.translation }
-            .onEnded { value in
-                floatingX += value.translation.width
-                floatingY += value.translation.height
-                dragOffset = .zero
-            }
-    }
-
-    /// Keeps pages clear of a toolbar docked on the side.
-    private func sideInset(for edge: ToolbarPosition) -> CGFloat {
-        guard !isFocusMode, position == edge else { return 0 }
-        return toolbarFrame.width + 20
-    }
-
-    private func updateInset(safeTop: CGFloat) {
-        if isFocusMode {
-            model.topContentInset = 24
-        } else if position == .top {
-            model.topContentInset = toolbarFrame.maxY + 12
-        } else {
-            model.topContentInset = safeTop + 16
-        }
-    }
-
-    private var pageIndicator: some View {
-        Button(action: showPages) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .fontWeight(.semibold)
-                    .lineLimit(1)
-                Text(verbatim: "\(model.currentPage) / \(model.pageCount)")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-            .font(.callout)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .capsule)
-        .padding(20)
-        .padding(.leading, sideInset(for: .leading))
-        .accessibilityLabel(Text("Pages"))
-        .accessibilityValue(Text(verbatim: "\(model.currentPage) / \(model.pageCount)"))
-    }
-
     private func startRecording() {
         Task {
             guard await audio.requestPermission() else {
@@ -338,13 +222,13 @@ enum ImageSource {
     case photos, files, scanner
 }
 
-/// The floating toolbar: back, tools, palette, undo/redo and more (ADR-0007).
-/// Horizontal at the top or floating, vertical when docked on a side.
+/// The editor bar (ADR-0007, ADR-0021), docked at the top in two rows:
+/// commands and tools above, the options of the current tool below.
+/// Everything is one tap away and every target is at least 44 pt.
 struct EditorToolbar: View {
     @Bindable var model: EditorModel
-    var axis: Axis = .horizontal
-    var isCompact = false
-    @Binding var position: ToolbarPosition
+    let title: String
+    let audio: NotebookAudio
     let onClose: () -> Void
     let onShowPages: () -> Void
     let onShowPalettes: () -> Void
@@ -352,50 +236,93 @@ struct EditorToolbar: View {
     let onFocusMode: () -> Void
     let onInsertImage: (ImageSource) -> Void
     let onShowPaper: () -> Void
-    let audio: NotebookAudio
     let onRecord: () -> Void
 
     @Environment(PaletteStore.self) private var palettes
-    @State private var optionsTool: ToolKind?
-    @State private var lastInkingTool = ToolKind.pen
-    @Namespace private var selection
-
-    private var isVertical: Bool { axis == .vertical }
-
-    private func stack(spacing: CGFloat) -> AnyLayout {
-        isVertical ? AnyLayout(VStackLayout(spacing: spacing)) : AnyLayout(HStackLayout(spacing: spacing))
-    }
+    @State private var isEditingWidth = false
 
     var body: some View {
-        GlassEffectContainer(spacing: 16) {
-            stack(spacing: 8).callAsFunction {
-                Button("Library", systemImage: "chevron.left", action: onClose)
-                    .labelStyle(.iconOnly)
-                    .frame(width: 48, height: 48)
-                    .glassEffect(.regular.interactive(), in: .circle)
-
-                tools
-                colors
-
-                if !isVertical && !isCompact {
-                    Spacer(minLength: 0)
-                }
-
-                stack(spacing: 2).callAsFunction {
-                    Button("Undo", systemImage: "arrow.uturn.backward", action: model.undo)
-                        .frame(width: 44, height: 44)
-                    Button("Redo", systemImage: "arrow.uturn.forward", action: model.redo)
-                        .frame(width: 44, height: 44)
-                }
-                .labelStyle(.iconOnly)
-                .padding(4)
-                .glassEffect(.regular.interactive(), in: .capsule)
-
-                moreMenu
+        VStack(spacing: 0) {
+            // Narrow windows first drop the title, then let the tools scroll.
+            ViewThatFits(in: .horizontal) {
+                commandRow(showsTitle: true, scrollsTools: false)
+                commandRow(showsTitle: false, scrollsTools: false)
+                commandRow(showsTitle: false, scrollsTools: true)
             }
-            .font(.title3)
+            .frame(height: 52)
+            Divider()
+            ViewThatFits(in: .horizontal) {
+                optionsRow
+                ScrollView(.horizontal, showsIndicators: false) { optionsRow }
+            }
+            .frame(height: 50)
+            Divider()
         }
-        .tint(.primary)
+        .background(Color(uiColor: .systemBackground))
+    }
+
+    // MARK: - Row 1: commands and tools
+
+    private func commandRow(showsTitle: Bool, scrollsTools: Bool) -> some View {
+        HStack(spacing: 2) {
+            BarButton(title: "Library", systemImage: "chevron.left", action: onClose)
+            pagesButton(showsTitle: showsTitle)
+            Spacer(minLength: 8)
+            if scrollsTools {
+                ScrollView(.horizontal, showsIndicators: false) { tools }
+            } else {
+                tools
+            }
+            Spacer(minLength: 8)
+            BarButton(title: "Undo", systemImage: "arrow.uturn.backward", action: model.undo)
+            BarButton(title: "Redo", systemImage: "arrow.uturn.forward", action: model.redo)
+            BarButton(title: "Record Audio", systemImage: audio.isRecording ? "mic.fill" : "mic", action: onRecord)
+                .foregroundStyle(audio.isRecording ? Color.red : Color.primary)
+                .disabled(audio.isRecording)
+            moreMenu
+        }
+        .padding(.horizontal, 8)
+    }
+
+    /// Notebook title and page counter; opens the page manager.
+    private func pagesButton(showsTitle: Bool) -> some View {
+        Button(action: onShowPages) {
+            HStack(spacing: 8) {
+                if showsTitle {
+                    Text(title)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .frame(maxWidth: 220, alignment: .leading)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                Text(verbatim: "\(model.currentPage) / \(model.pageCount)")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            .font(.callout)
+            .padding(.horizontal, 10)
+            .frame(height: 44)
+        }
+        .buttonStyle(BarButtonStyle())
+        .accessibilityLabel(Text("Pages"))
+        .accessibilityValue(Text(verbatim: "\(model.currentPage) / \(model.pageCount)"))
+    }
+
+    private var tools: some View {
+        HStack(spacing: 2) {
+            ForEach(ToolKind.allCases) { tool in
+                Button {
+                    model.tool = tool
+                } label: {
+                    Image(systemName: tool.symbolName)
+                        .font(.system(size: 20, weight: .medium))
+                        .frame(width: 48, height: 44)
+                }
+                .buttonStyle(BarButtonStyle(isSelected: model.tool == tool))
+                .accessibilityLabel(tool.title)
+                .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
+            }
+        }
     }
 
     private var moreMenu: some View {
@@ -408,10 +335,8 @@ struct EditorToolbar: View {
                 Label("Insert Image", systemImage: "photo.badge.plus")
             }
             Button("Paper", systemImage: "doc.richtext", action: onShowPaper)
-            Divider()
-            Button("Record Audio", systemImage: "mic", action: onRecord)
-                .disabled(audio.isRecording)
             if !audio.recordings.isEmpty {
+                Divider()
                 Menu {
                     RecordingsMenu(audio: audio)
                 } label: {
@@ -420,119 +345,115 @@ struct EditorToolbar: View {
             }
             Divider()
             Button("Palettes", systemImage: "paintpalette", action: onShowPalettes)
-            Picker(selection: $position) {
-                ForEach(ToolbarPosition.allCases) { option in
-                    Label(option.title, systemImage: option.symbolName).tag(option)
-                }
-            } label: {
-                Label("Toolbar Position", systemImage: "rectangle.3.group")
-            }
-            .pickerStyle(.menu)
             Button("Focus Mode", systemImage: "arrow.up.left.and.arrow.down.right", action: onFocusMode)
             Divider()
             Button("Export PDF", systemImage: "square.and.arrow.up", action: onExport)
         } label: {
-            Label("More", systemImage: "ellipsis")
-                .labelStyle(.iconOnly)
-                .frame(width: 48, height: 48)
+            Image(systemName: "ellipsis.circle")
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
         }
-        .glassEffect(.regular.interactive(), in: .circle)
+        .tint(.primary)
+        .accessibilityLabel(Text("More"))
     }
 
-    private var tools: some View {
-        stack(spacing: 0).callAsFunction {
-            ForEach(ToolKind.allCases) { tool in
-                Button {
-                    select(tool)
-                } label: {
-                    Image(systemName: tool.symbolName)
-                        .symbolVariant(model.tool == tool ? .fill : .none)
-                        .foregroundStyle(model.tool == tool ? Color.accentColor : .primary)
-                        .frame(width: 40, height: 44)
-                        .background {
-                            if model.tool == tool {
-                                Capsule()
-                                    .fill(Color.accentColor.opacity(0.16))
-                                    .padding(4)
-                                    .matchedGeometryEffect(id: "tool", in: selection)
-                            }
-                        }
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(tool.title)
-                .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
-                .popover(isPresented: Binding(get: { optionsTool == tool }, set: { if !$0 { optionsTool = nil } })) {
-                    ToolOptionsView(model: model, tool: tool) { source in
-                        optionsTool = nil
-                        onInsertImage(source)
-                    }
-                    .presentationCompactAdaptation(.popover)
-                }
-            }
-
-            // The ruler is a switch, not a tool: it stays on while you write (STR-4).
-            Button {
-                model.isRulerActive.toggle()
-            } label: {
-                Image(systemName: "ruler")
-                    .foregroundStyle(model.isRulerActive ? Color.accentColor : .primary)
-                    .frame(width: 40, height: 44)
-                    .background {
-                        if model.isRulerActive {
-                            Circle().fill(Color.accentColor.opacity(0.16)).padding(4)
-                        }
-                    }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Ruler"))
-            .accessibilityAddTraits(model.isRulerActive ? .isSelected : [])
-        }
-        .padding(4)
-        .glassEffect(.regular.interactive(), in: .capsule)
-        .animation(.snappy(duration: 0.25), value: model.tool)
-    }
+    // MARK: - Row 2: options of the current tool
 
     @ViewBuilder
-    private var colors: some View {
-        let swatches = ForEach(model.palette.indices, id: \.self) { index in
-            Button {
-                model.colorIndex = index
-                if !model.tool.isInking {
-                    model.tool = lastInkingTool
+    private var optionsRow: some View {
+        HStack(spacing: 6) {
+            switch model.tool {
+            case .pen, .pencil, .highlighter:
+                widths(for: model.tool)
+                separator
+                colors
+                separator
+                rulerButton
+            case .eraser:
+                Picker("Eraser", selection: $model.eraserMode) {
+                    Text("Partial").tag(EraserMode.partial)
+                    Text("Whole Stroke").tag(EraserMode.stroke)
                 }
-            } label: {
-                Circle()
-                    .fill(Color(uiColor: model.palette[index]))
-                    .frame(width: 24, height: 24)
-                    .overlay { Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1) }
-                    .padding(2)
-                    .overlay {
-                        Circle()
-                            .strokeBorder(Color.primary, lineWidth: model.colorIndex == index && model.tool.isInking ? 2 : 0)
-                    }
+                .pickerStyle(.segmented)
+                .frame(width: 300)
+            case .lasso:
+                Text("Circle what you wrote to select it, then drag it to move it.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            case .text:
+                colors
+                separator
+                HStack(spacing: 8) {
+                    InsertImageButtons(onInsert: onInsertImage)
+                }
+                .buttonStyle(.bordered)
+                .tint(.primary)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Color \(index + 1)"))
-            .accessibilityAddTraits(model.colorIndex == index ? .isSelected : [])
         }
+        .padding(.horizontal, 12)
+        .frame(maxHeight: .infinity)
+    }
 
-        Group {
-            if isVertical {
-                // Two columns keep the side toolbar short enough for landscape.
-                LazyVGrid(columns: [GridItem(.fixed(30), spacing: 4), GridItem(.fixed(30), spacing: 4)], spacing: 4) {
-                    swatches
+    private var separator: some View {
+        Divider()
+            .frame(height: 26)
+            .padding(.horizontal, 6)
+    }
+
+    /// The three preferred widths (STR-6). Tapping the selected one adjusts it.
+    private func widths(for tool: ToolKind) -> some View {
+        let presets = model.widthPresets[tool] ?? []
+        let selected = model.widthIndex[tool] ?? 0
+        return HStack(spacing: 2) {
+            ForEach(presets.indices, id: \.self) { index in
+                Button {
+                    if index == selected {
+                        isEditingWidth = true
+                    } else {
+                        model.widthIndex[tool] = index
+                    }
+                } label: {
+                    Circle()
+                        .fill(Color(uiColor: model.color).opacity(tool == .highlighter ? 0.5 : 1))
+                        .frame(width: WidthPopover.dotSize(presets[index], tool: tool), height: WidthPopover.dotSize(presets[index], tool: tool))
+                        .frame(width: 44, height: 44)
                 }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 6)
-            } else {
-                HStack(spacing: 3) {
-                    swatches
-                }
-                .padding(.horizontal, 10)
-                .frame(height: 52)
+                .buttonStyle(BarButtonStyle(isHighlighted: index == selected))
+                .accessibilityLabel(Text("Width"))
+                .accessibilityValue(Text(verbatim: "\(index + 1)"))
+                .accessibilityAddTraits(index == selected ? .isSelected : [])
             }
         }
-        .glassEffect(.regular.interactive(), in: isVertical ? AnyShape(.rect(cornerRadius: 26)) : AnyShape(.capsule))
+        .popover(isPresented: $isEditingWidth) {
+            WidthPopover(model: model, tool: tool)
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private var colors: some View {
+        HStack(spacing: 0) {
+            ForEach(model.palette.indices, id: \.self) { index in
+                Button {
+                    model.colorIndex = index
+                } label: {
+                    Circle()
+                        .fill(Color(uiColor: model.palette[index]))
+                        .frame(width: 28, height: 28)
+                        .overlay { Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 1) }
+                        .padding(4)
+                        .overlay {
+                            Circle().strokeBorder(Color.primary, lineWidth: model.colorIndex == index ? 2.5 : 0)
+                        }
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Color \(index + 1)"))
+                .accessibilityAddTraits(model.colorIndex == index ? .isSelected : [])
+            }
+        }
         .contextMenu {
             ForEach(palettes.palettes) { palette in
                 Button {
@@ -550,87 +471,105 @@ struct EditorToolbar: View {
         }
     }
 
-    private func select(_ tool: ToolKind) {
-        if model.tool == tool {
-            // Tapping the current tool shows its options (screen 3).
-            if tool != .lasso {
-                optionsTool = tool
-            }
-        } else {
-            model.tool = tool
+    /// The ruler is a switch, not a tool: it stays on while you write (STR-4).
+    private var rulerButton: some View {
+        Button {
+            model.isRulerActive.toggle()
+        } label: {
+            Image(systemName: "ruler")
+                .font(.system(size: 19, weight: .medium))
+                .frame(width: 48, height: 44)
         }
-        if tool.isInking {
-            lastInkingTool = tool
-        }
+        .buttonStyle(BarButtonStyle(isSelected: model.isRulerActive))
+        .accessibilityLabel(Text("Ruler"))
+        .accessibilityAddTraits(model.isRulerActive ? .isSelected : [])
     }
 }
 
-/// Popover for the current tool: three preferred widths, or the eraser mode.
-struct ToolOptionsView: View {
-    @Bindable var model: EditorModel
-    let tool: ToolKind
-    var onInsertImage: (ImageSource) -> Void = { _ in }
+/// An icon button of the editor bar, with a full 44 pt target.
+struct BarButton: View {
+    let title: LocalizedStringKey
+    let systemImage: String
+    let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(tool.title)
-                .font(.headline)
-            if tool == .text {
-                Text("Tap the page to add a text box. Drag to move, use the corner to resize.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                VStack(alignment: .leading, spacing: 4) {
-                    InsertImageButtons(onInsert: onInsertImage)
-                }
-                .buttonStyle(.glass)
-            } else if tool == .eraser {
-                Picker("Eraser", selection: $model.eraserMode) {
-                    Text("Partial").tag(EraserMode.partial)
-                    Text("Whole Stroke").tag(EraserMode.stroke)
-                }
-                .pickerStyle(.segmented)
-            } else if tool.isInking {
-                let presets = model.widthPresets[tool] ?? []
-                let selected = model.widthIndex[tool] ?? 0
-                HStack(spacing: 14) {
-                    ForEach(presets.indices, id: \.self) { index in
-                        Button {
-                            model.widthIndex[tool] = index
-                        } label: {
-                            Circle()
-                                .fill(Color(uiColor: model.color).opacity(tool == .highlighter ? 0.5 : 1))
-                                .frame(width: dotSize(presets[index]), height: dotSize(presets[index]))
-                                .frame(width: 52, height: 52)
-                                .glassEffect(index == selected ? .regular.tint(.accentColor.opacity(0.25)).interactive() : .regular.interactive(), in: .circle)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Width")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Slider(value: widthBinding(index: selected), in: range)
-                }
-            }
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 19, weight: .medium))
+                .frame(width: 44, height: 44)
         }
-        .padding(20)
-        .frame(width: 260)
+        .buttonStyle(BarButtonStyle())
+        .accessibilityLabel(Text(title))
+    }
+}
+
+/// Bar buttons react on the whole target and show clearly which one is on.
+struct BarButtonStyle: ButtonStyle {
+    /// Filled with the accent color: the current tool.
+    var isSelected = false
+    /// Softly tinted: the current width.
+    var isHighlighted = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(isSelected ? AnyShapeStyle(Color.white) : AnyShapeStyle(.foreground))
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(fill(isPressed: configuration.isPressed))
+                    .padding(.vertical, 3)
+                    .padding(.horizontal, 2)
+            }
+            .contentShape(.rect)
+            .opacity(configuration.isPressed && isSelected ? 0.8 : 1)
     }
 
-    private var range: ClosedRange<CGFloat> {
+    private func fill(isPressed: Bool) -> Color {
+        if isSelected { return .accentColor }
+        if isPressed { return Color.primary.opacity(0.16) }
+        return Color.primary.opacity(isHighlighted ? 0.1 : 0)
+    }
+}
+
+/// Adjusts the selected width preset of an inking tool (STR-6).
+struct WidthPopover: View {
+    @Bindable var model: EditorModel
+    let tool: ToolKind
+
+    var body: some View {
+        let index = model.widthIndex[tool] ?? 0
+        let width = model.widthPresets[tool]?[index] ?? Self.range(for: tool).lowerBound
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Width")
+                    .font(.headline)
+                Spacer()
+                Text(verbatim: Double(width).formatted(.number.precision(.fractionLength(1))))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            Capsule()
+                .fill(Color(uiColor: model.color).opacity(tool == .highlighter ? 0.5 : 1))
+                .frame(height: min(width, 40))
+                .frame(height: 40)
+            Slider(value: widthBinding(index: index), in: Self.range(for: tool))
+        }
+        .padding(20)
+        .frame(width: 280)
+    }
+
+    static func range(for tool: ToolKind) -> ClosedRange<CGFloat> {
         tool == .highlighter ? 5...40 : 0.5...12
     }
 
-    private func dotSize(_ width: CGFloat) -> CGFloat {
-        let normalized = (width - range.lowerBound) / (range.upperBound - range.lowerBound)
-        return 6 + normalized * 26
+    static func dotSize(_ width: CGFloat, tool: ToolKind) -> CGFloat {
+        let range = range(for: tool)
+        let normalized = (min(max(width, range.lowerBound), range.upperBound) - range.lowerBound) / (range.upperBound - range.lowerBound)
+        return 5 + normalized * 23
     }
 
     private func widthBinding(index: Int) -> Binding<CGFloat> {
         Binding {
-            model.widthPresets[tool]?[index] ?? range.lowerBound
+            model.widthPresets[tool]?[index] ?? Self.range(for: tool).lowerBound
         } set: { newValue in
             model.widthPresets[tool]?[index] = (newValue * 2).rounded() / 2
         }

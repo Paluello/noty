@@ -191,6 +191,16 @@
         }
       }
     },
+    "Circle what you wrote to select it, then drag it to move it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerchia quello che hai scritto per selezionarlo, poi trascinalo per spostarlo."
+          }
+        }
+      }
+    },
     "Close": {
       "localizations": {
         "it": {
@@ -561,16 +571,6 @@
         }
       }
     },
-    "Floating": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flottante"
-          }
-        }
-      }
-    },
     "Focus Mode": {
       "localizations": {
         "it": {
@@ -711,16 +711,6 @@
         }
       }
     },
-    "Left": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A sinistra"
-          }
-        }
-      }
-    },
     "Library": {
       "localizations": {
         "it": {
@@ -857,16 +847,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sposta dopo"
-          }
-        }
-      }
-    },
-    "Move Toolbar": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sposta la barra"
           }
         }
       }
@@ -1221,16 +1201,6 @@
         }
       }
     },
-    "Position": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Posizione"
-          }
-        }
-      }
-    },
     "Previous Tool": {
       "localizations": {
         "it": {
@@ -1347,16 +1317,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Riprendi"
-          }
-        }
-      }
-    },
-    "Right": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A destra"
           }
         }
       }
@@ -1551,16 +1511,6 @@
         }
       }
     },
-    "Tap the page to add a text box. Drag to move, use the corner to resize.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tocca la pagina per aggiungere una casella di testo. Trascina per spostare, usa l'angolo per ridimensionare."
-          }
-        }
-      }
-    },
     "Text and Images": {
       "localizations": {
         "it": {
@@ -1607,36 +1557,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Per registrare, consenti a Noty di usare il microfono in Impostazioni dell'iPad › App › Noty."
-          }
-        }
-      }
-    },
-    "Toolbar": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Barra degli strumenti"
-          }
-        }
-      }
-    },
-    "Toolbar Position": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Posizione della barra"
-          }
-        }
-      }
-    },
-    "Top": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In alto"
           }
         }
       }

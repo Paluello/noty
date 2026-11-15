@@ -93,8 +93,6 @@ public final class EditorModel {
     public var fingerDrawing = false
     /// Writing near the bottom of the last page adds a new page.
     public var autoNewPage = true
-    /// Space covered by the floating toolbar above the pages.
-    public var topContentInset: CGFloat = 0
     /// Shows PencilKit's ruler on the current page (STR-4).
     public var isRulerActive = false
     /// Hold the Pencil still at the end of a stroke to straighten it (STR-7).
@@ -182,6 +180,12 @@ public final class EditorModel {
         case .ignore: .none
         default: .previousTool
         }
+    }
+
+    /// Changes only when the canvas needs a new `PKTool`: setting the tool
+    /// again while the Pencil is down would interrupt the stroke.
+    var toolKey: String {
+        "\(tool.rawValue)|\(color.hex)|\(width(for: tool))|\(eraserMode.rawValue)"
     }
 
     var pkTool: PKTool {

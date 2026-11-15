@@ -44,7 +44,7 @@ Priorità: **M** = obbligatorio, **S** = importante, **C** = se c'è tempo. Vers
 ## Interfaccia
 | ID | Requisito | Priorità | Versione |
 |---|---|---|---|
-| UI-1 | Barra strumenti in alto per impostazione predefinita, spostabile (alto, sinistra, destra, flottante) | M | 0.2 |
+| UI-1 | Barra strumenti fissa in alto, su due righe: strumenti sopra, opzioni dello strumento sotto (ADR-0021; fino alla 0.5 era spostabile) | M | 0.2 |
 | UI-2 | Modalità concentrazione: nasconde tutto tranne la pagina | S | 0.2 |
 | UI-3 | Tema chiaro/scuro per l'interfaccia (la pagina resta chiara) | M | 0.1 |
 | UI-4 | Supporto a Split View e Stage Manager (più finestre) | S | 0.2 |

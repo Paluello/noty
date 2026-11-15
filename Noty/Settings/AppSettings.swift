@@ -11,39 +11,11 @@ enum SettingsKey {
     static let lastColorIndex = "lastColorIndex"
     static let widthPresets = "widthPresets"
     static let widthIndex = "widthIndex"
-    static let toolbarPosition = "toolbarPosition"
-    static let floatingToolbarX = "floatingToolbarX"
-    static let floatingToolbarY = "floatingToolbarY"
     static let pencilTapAction = "pencilTapAction"
     static let pencilSqueezeAction = "pencilSqueezeAction"
     static let shapeRecognition = "shapeRecognition"
     static let appLock = "appLock"
     static let libraryBookmark = "libraryBookmark"
-}
-
-/// Where the editor toolbar sits (UI-1).
-enum ToolbarPosition: String, CaseIterable, Identifiable {
-    case top, leading, trailing, floating
-
-    var id: String { rawValue }
-
-    var title: LocalizedStringKey {
-        switch self {
-        case .top: "Top"
-        case .leading: "Left"
-        case .trailing: "Right"
-        case .floating: "Floating"
-        }
-    }
-
-    var symbolName: String {
-        switch self {
-        case .top: "rectangle.tophalf.inset.filled"
-        case .leading: "rectangle.lefthalf.inset.filled"
-        case .trailing: "rectangle.righthalf.inset.filled"
-        case .floating: "rectangle.inset.filled.on.rectangle"
-        }
-    }
 }
 
 extension PencilAction {

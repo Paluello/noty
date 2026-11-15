@@ -27,3 +27,5 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0017](0017-preferiti-recenti-per-id.md) | Preferiti e recenti riferiti all'id del quaderno | Accettato |
 | [0018](0018-sync-cartella-scelta.md) | Sincronizzazione tramite una cartella scelta dall'utente | Accettato |
 | [0019](0019-ricerca-scrittura-vision.md) | Ricerca nella scrittura a mano con Vision, sul dispositivo | Accettato |
+| [0020](0020-tela-unica.md) | Un'unica tela PencilKit che scorre e zooma da sola | Accettato |
+| [0021](0021-barra-fissa-due-righe.md) | Barra dell'editor fissa in alto, su due righe | Accettato |

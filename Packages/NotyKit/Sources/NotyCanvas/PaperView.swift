@@ -1,67 +1,106 @@
 import NotyCore
 import UIKit
 
-/// Shows a page's background pattern. It is separate from the drawing, so the
-/// eraser never touches it and it stays vector-sharp in PDFs (ADR-0006).
+/// What the paper tiles draw: one pattern repeated on every page of the stack.
+struct PaperConfiguration: Equatable, Sendable {
+    var style = PaperStyle.blank
+    var color = PaperColor.white
+    var pageSize = CGSize.zero
+    var pageCount = 0
+}
+
+/// Draws the paper of the whole notebook in tiles, on demand (ADR-0020).
 ///
-/// All pages share one rendered image of the pattern: drawing each page on its
-/// own would cost ~15 MB per page at high zoom.
-final class PaperView: UIView {
-    init(color: PaperColor, frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = color.uiColor
-        isUserInteractionEnabled = false
-        layer.contentsGravity = .resize
-        layer.shadowColor = UIColor.black.cgColor
-        layer.shadowOpacity = 0.12
-        layer.shadowRadius = 6
-        layer.shadowOffset = CGSize(width: 0, height: 2)
-        layer.shadowPath = UIBezierPath(rect: bounds).cgPath
+/// A tiled layer redraws only what is on screen, at the resolution of the
+/// current zoom: lines stay sharp at any zoom level and memory does not grow
+/// with the number of pages. Tiles are drawn on background threads, so the
+/// configuration is protected by a lock.
+final class PaperTiledLayer: CATiledLayer {
+    static let separatorColor = UIColor(white: 0.62, alpha: 1)
+
+    private let lock = NSLock()
+    private var storedConfiguration = PaperConfiguration()
+
+    var configuration: PaperConfiguration {
+        get { lock.withLock { storedConfiguration } }
+        set { lock.withLock { storedConfiguration = newValue } }
+    }
+
+    override init() {
+        super.init()
+    }
+
+    /// Core Animation copies layers for presentation.
+    override init(layer: Any) {
+        super.init(layer: layer)
+        if let other = layer as? PaperTiledLayer {
+            storedConfiguration = other.configuration
+        }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    func show(_ image: CGImage?) {
-        if layer.contents as! CGImage? !== image {
-            layer.contents = image
+    /// No cross-fade: new tiles must not flash while writing or zooming.
+    override class func fadeDuration() -> CFTimeInterval { 0 }
+
+    override func draw(in context: CGContext) {
+        let configuration = configuration
+        let size = configuration.pageSize
+        guard size.width > 0, size.height > 0, configuration.pageCount > 0 else { return }
+        let clip = context.boundingBoxOfClipPath
+        guard !clip.isNull, !clip.isInfinite else { return }
+        let first = max(0, Int((clip.minY / size.height).rounded(.down)))
+        let last = min(configuration.pageCount - 1, Int((clip.maxY / size.height).rounded(.down)))
+        guard first <= last else { return }
+
+        for index in first...last {
+            let pageRect = CGRect(x: 0, y: CGFloat(index) * size.height, width: size.width, height: size.height)
+            context.saveGState()
+            context.clip(to: pageRect)
+            context.setFillColor(configuration.color.uiColor.cgColor)
+            context.fill(pageRect)
+            context.translateBy(x: 0, y: pageRect.minY)
+            PaperRenderer.draw(configuration.style, in: CGRect(origin: .zero, size: size), context: context)
+            if index > 0 {
+                // Page break: a thin line, like a continuous notebook.
+                context.setStrokeColor(Self.separatorColor.cgColor)
+                context.setLineWidth(1)
+                context.move(to: CGPoint(x: 0, y: 0.5))
+                context.addLine(to: CGPoint(x: size.width, y: 0.5))
+                context.strokePath()
+            }
+            context.restoreGState()
         }
     }
 }
 
-/// One rendered paper image per style, size and scale, shared by every page.
-@MainActor
-final class PaperImageCache {
-    private struct Key: Hashable {
-        let style: PaperStyle
-        let color: PaperColor
-        let width: Int
-        let height: Int
-        let scale: Int
+/// Shows the background pattern of every page. It is separate from the
+/// drawing, so the eraser never touches it and it stays vector-sharp in PDFs
+/// (ADR-0006).
+final class PaperView: UIView {
+    override class var layerClass: AnyClass { PaperTiledLayer.self }
+
+    private var tiledLayer: PaperTiledLayer { layer as! PaperTiledLayer }
+
+    init() {
+        super.init(frame: .zero)
+        isUserInteractionEnabled = false
+        tiledLayer.tileSize = CGSize(width: 512, height: 512)
+        // Extra detail levels: sharp up to 16x the on-screen size.
+        tiledLayer.levelsOfDetailBias = 4
+        tiledLayer.needsDisplayOnBoundsChange = true
     }
 
-    private var images: [Key: CGImage] = [:]
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    func image(_ style: PaperStyle, color: PaperColor, size: CGSize, scale: CGFloat) -> CGImage? {
-        // Round the scale so small zoom changes reuse the same image.
-        let roundedScale = max(1, (scale * 2).rounded(.up) / 2)
-        let key = Key(style: style, color: color, width: Int(size.width), height: Int(size.height), scale: Int(roundedScale * 100))
-        if let image = images[key] {
-            return image
-        }
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = roundedScale
-        format.opaque = true
-        let rect = CGRect(origin: .zero, size: size)
-        let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
-            color.uiColor.setFill()
-            context.fill(rect)
-            PaperRenderer.draw(style, in: rect, context: context.cgContext)
-        }.cgImage
-        // Keep only the current image: the old zoom level is not needed any more.
-        images = [:]
-        images[key] = image
-        return image
+    func update(_ configuration: PaperConfiguration) {
+        guard tiledLayer.configuration != configuration else { return }
+        tiledLayer.configuration = configuration
+        // Shown while a tile is still being drawn.
+        backgroundColor = configuration.color.uiColor
+        tiledLayer.setNeedsDisplay()
     }
 }
 

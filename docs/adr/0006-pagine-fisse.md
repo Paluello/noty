@@ -1,5 +1,5 @@
 # ADR-0006: Pagine a dimensione fissa con sfondo separato
-- **Stato**: Accettato · **Data**: 2026-10-09
+- **Stato**: Accettato, in parte sostituito da ADR-0020 (una sola tela per tutto il quaderno) · **Data**: 2026-10-09
 
 ## Decisione
 - Pagine **solo A4** (595×842 pt), verticali o orizzontali. Un `PKCanvasView` **per pagina visibile**, riciclato durante lo scorrimento verticale (come le celle di una lista), con zoom gestito dal contenitore.

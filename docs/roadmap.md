@@ -50,3 +50,11 @@ Corretti durante le prove:
 - le date delle registrazioni erano arrotondate al secondo.
 
 Da verificare su iPad vero: registrazione con iPad bloccato, telefonate durante la registrazione, inchiostro sbiadito e salto toccando un tratto, riconoscimento di grafie vere.
+
+## Stato della 0.6: editor rifatto
+Motivo: su iPad vero la penna era in ritardo, il tratto sfarfallava, la scrittura era sfocata con lo zoom e i comandi erano scomodi da toccare.
+
+Implementato: una sola tela PencilKit per tutto il quaderno, che scorre e zooma in modo nativo (ADR-0020); carta a tasselli, nitida a ogni zoom; salvataggio che non parte mai a metà tratto; barra fissa in alto su due righe con le opzioni dello strumento sempre visibili (ADR-0021). Rimosse le posizioni sinistra / destra / flottante della barra.
+
+Non ancora provato: la build è stata verificata solo dalla CI (compilazione e test dei pacchetti), non nel simulatore né su iPad.
+Da verificare su iPad vero: latenza e nitidezza con la Pencil, zoom, strumento Testo sopra la tela unica, ascolto con inchiostro sbiadito, apertura di quaderni lunghi (tempo e memoria), barra in Split View.

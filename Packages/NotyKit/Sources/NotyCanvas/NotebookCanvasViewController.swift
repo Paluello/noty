@@ -6,44 +6,75 @@ import os
 
 private let log = Logger(subsystem: "io.github.paluello.noty", category: "canvas")
 
-/// Shows a notebook as a vertical stack of A4 pages (ADR-0006).
+/// The ink of the whole notebook. With the Text tool it hands touches to the
+/// text boxes and images underneath (ADR-0014).
+final class InkCanvasView: PKCanvasView {
+    weak var elementContainer: UIView?
+    var routesTouchesToElements = false
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if routesTouchesToElements, let container = elementContainer,
+           let hit = container.hitTest(convert(point, to: container), with: event), hit !== container {
+            return hit
+        }
+        return super.hitTest(point, with: event)
+    }
+}
+
+/// Shows a notebook as a continuous vertical stack of A4 pages (ADR-0006).
 ///
-/// Every page has a cheap `PaperView`; only the pages near the viewport get a
-/// `PKCanvasView`, taken from a small pool and recycled while scrolling.
-/// Changes are saved per page, about a second after the last stroke (ADR-0004).
+/// One `PKCanvasView` holds the ink of every page and is itself the scroll
+/// view (ADR-0020): PencilKit draws, scrolls and zooms natively, so strokes
+/// appear without delay and are re-rendered sharp at any zoom. The paper and
+/// the text/image layers sit in an underlay that follows the zoom.
+/// On disk every page keeps its own drawing (ADR-0004): the ink is split by
+/// page when saving, about a second after the last stroke.
 public final class NotebookCanvasViewController: UIViewController {
-    static let pageGap: CGFloat = 28
-    static let margin: CGFloat = 28
     static let saveDelay: Duration = .seconds(1)
     /// Writing below this distance from the bottom of the last page adds a new page.
     static let autoNewPageThreshold: CGFloat = 120
+    /// Zoom range, relative to the page fitting the screen width.
+    static let maximumZoom: CGFloat = 5
+    /// Text boxes are rasterized at most at this scale.
+    static let maximumElementScale: CGFloat = 10
 
     let package: NotebookPackage
     private(set) var manifest: NotebookManifest
     let model: EditorModel
 
-    private let scrollView = UIScrollView()
-    private let contentView = UIView()
-    private var paperViews: [PaperView] = []
-    private let paperImages = PaperImageCache()
-    private var activeCanvases: [Int: PKCanvasView] = [:]
-    private var canvasPool: [PKCanvasView] = []
+    private let canvas = InkCanvasView()
+    private let underlay = UIView()
+    private let paperView = PaperView()
     private var elementLayers: [Int: ElementLayerView] = [:]
-    // Playback (AUD-2): the real drawings, while the canvases show dimmed copies.
+    // Playback (AUD-2): the real drawing, while the canvas shows a dimmed copy.
     private var playbackDate: Date?
-    private var originalDrawings: [Int: PKDrawing] = [:]
-    private var dimmedCounts: [Int: Int] = [:]
+    private var originalDrawing: PKDrawing?
+    private var dimmedCount: Int?
     private let seekTap = UITapGestureRecognizer()
     /// Stroke count when the Pencil touched down, to recognize only new strokes.
-    private var strokeCountAtToolStart: [ObjectIdentifier: Int] = [:]
-    private var dirtyPages: Set<Int> = []
+    private var strokeCountAtToolStart: Int?
+    private var isUsingTool = false
+    // Saving: which pages changed since the last write.
+    private var inkIsDirty = false
+    private var touchedPages: Set<Int> = []
+    private var savedSignatures: [Int] = []
+    /// Pages whose file could not be read: never overwritten with nothing.
+    private var unreadablePages: Set<UUID> = []
     private var saveTask: Task<Void, Never>?
     private var isLoadingDrawing = false
+    private var appliedToolKey: String?
     private var lastLayoutWidth: CGFloat = 0
 
     private var pageSize: CGSize {
         let size = PageGeometry.size(for: manifest.orientation)
         return CGSize(width: size.width, height: size.height)
+    }
+
+    private var pageCount: Int { manifest.pageIDs.count }
+
+    /// Size of all the pages, in page points (zoom 1).
+    private var stackSize: CGSize {
+        CGSize(width: pageSize.width, height: pageSize.height * CGFloat(pageCount))
     }
 
     public init(package: NotebookPackage, model: EditorModel) throws {
@@ -66,29 +97,42 @@ public final class NotebookCanvasViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .clear
 
-        scrollView.frame = view.bounds
-        scrollView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        scrollView.delegate = self
-        scrollView.backgroundColor = .clear
-        scrollView.contentInsetAdjustmentBehavior = .never
-        scrollView.showsHorizontalScrollIndicator = false
-        view.addSubview(scrollView)
-        scrollView.addSubview(contentView)
+        canvas.frame = view.bounds
+        canvas.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        canvas.backgroundColor = .clear
+        canvas.isOpaque = false
+        canvas.delegate = self
+        canvas.contentInsetAdjustmentBehavior = .never
+        canvas.showsHorizontalScrollIndicator = false
+        canvas.alwaysBounceVertical = true
         // Pages are always light, even in dark mode (UI-3); otherwise PencilKit
         // inverts ink colors and black strokes turn white.
-        contentView.overrideUserInterfaceStyle = .light
+        canvas.overrideUserInterfaceStyle = .light
+        view.addSubview(canvas)
 
-        buildPages()
+        // The underlay scales around its top-left corner, like the ink.
+        underlay.layer.anchorPoint = .zero
+        underlay.isUserInteractionEnabled = false
+        underlay.addSubview(paperView)
+        canvas.insertSubview(underlay, at: 0)
+        canvas.elementContainer = underlay
 
+        loadInk()
+        layoutPages()
+        applySettings()
+
+        let touch = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
         let undoTap = UITapGestureRecognizer(target: self, action: #selector(undo))
         undoTap.numberOfTouchesRequired = 2
+        undoTap.allowedTouchTypes = touch
         let redoTap = UITapGestureRecognizer(target: self, action: #selector(redo))
         redoTap.numberOfTouchesRequired = 3
-        scrollView.addGestureRecognizer(undoTap)
-        scrollView.addGestureRecognizer(redoTap)
+        redoTap.allowedTouchTypes = touch
+        canvas.addGestureRecognizer(undoTap)
+        canvas.addGestureRecognizer(redoTap)
         seekTap.addTarget(self, action: #selector(handleSeekTap))
         seekTap.isEnabled = false
-        scrollView.addGestureRecognizer(seekTap)
+        canvas.addGestureRecognizer(seekTap)
 
         let pencilInteraction = UIPencilInteraction(delegate: self)
         view.addInteraction(pencilInteraction)
@@ -101,27 +145,28 @@ public final class NotebookCanvasViewController: UIViewController {
 
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        applyInsets()
         let width = view.bounds.width
-        guard width > 0, width != lastLayoutWidth else { return }
+        guard width > 0, pageSize.width > 0, width != lastLayoutWidth else { return }
         let isFirstLayout = lastLayoutWidth == 0
         let page = model.currentPage - 1
         lastLayoutWidth = width
 
-        // Fit the page width to the screen; zoom up to 4x from there.
-        let fit = width / contentView.bounds.width
-        scrollView.minimumZoomScale = fit
-        scrollView.maximumZoomScale = fit * 4
-        scrollView.zoomScale = fit
-        applyInsets()
+        // Fit the page width to the screen; zoom in from there.
+        let fit = width / pageSize.width
+        canvas.minimumZoomScale = fit
+        canvas.maximumZoomScale = fit * Self.maximumZoom
+        canvas.zoomScale = fit
+        updateContentSize()
         if isFirstLayout, let initialPage = model.initialPage {
             scrollToPage(initialPage, animated: false)
             model.initialPage = nil
         } else if isFirstLayout {
-            scrollView.contentOffset = CGPoint(x: 0, y: -scrollView.contentInset.top)
+            canvas.contentOffset = CGPoint(x: 0, y: -canvas.contentInset.top)
         } else {
             scrollToPage(page, animated: false)
         }
-        updateRenderScale()
+        updateElementScale()
         updateVisiblePages()
     }
 
@@ -132,68 +177,54 @@ public final class NotebookCanvasViewController: UIViewController {
 
     // MARK: - Layout
 
+    /// Frame of a page in the underlay, in page points.
     private func frameForPage(at index: Int) -> CGRect {
-        CGRect(
-            x: Self.margin,
-            y: Self.pageGap + CGFloat(index) * (pageSize.height + Self.pageGap),
-            width: pageSize.width,
-            height: pageSize.height
-        )
+        CGRect(x: 0, y: CGFloat(index) * pageSize.height, width: pageSize.width, height: pageSize.height)
     }
 
-    private func buildPages() {
-        for index in manifest.pageIDs.indices {
-            addPaperView(at: index)
-        }
+    /// Lays out the paper for the current page list.
+    private func layoutPages() {
+        underlay.bounds = CGRect(origin: .zero, size: stackSize)
+        underlay.center = .zero
+        paperView.frame = underlay.bounds
+        paperView.update(PaperConfiguration(
+            style: manifest.paper, color: manifest.paperColor, pageSize: pageSize, pageCount: pageCount
+        ))
         updateContentSize()
     }
 
-    private func addPaperView(at index: Int) {
-        let paper = PaperView(color: manifest.paperColor, frame: frameForPage(at: index))
-        paper.show(currentPaperImage)
-        contentView.insertSubview(paper, at: 0)
-        paperViews.append(paper)
-    }
-
     private func updateContentSize() {
-        let size = CGSize(
-            width: pageSize.width + Self.margin * 2,
-            height: Self.pageGap + CGFloat(paperViews.count) * (pageSize.height + Self.pageGap)
-        )
-        contentView.bounds = CGRect(origin: .zero, size: size)
-        let scaled = CGSize(width: size.width * scrollView.zoomScale, height: size.height * scrollView.zoomScale)
-        contentView.center = CGPoint(x: scaled.width / 2, y: scaled.height / 2)
-        scrollView.contentSize = scaled
-    }
-
-    func applyInsets() {
-        let insets = UIEdgeInsets(top: model.topContentInset, left: 0, bottom: view.safeAreaInsets.bottom + 80, right: 0)
-        guard scrollView.contentInset != insets else { return }
-        scrollView.contentInset = insets
-        scrollView.verticalScrollIndicatorInsets = insets
-    }
-
-    private var renderScale: CGFloat {
-        (view.window?.screen.scale ?? traitCollection.displayScale) * scrollView.zoomScale
-    }
-
-    private var currentPaperImage: CGImage? {
-        paperImages.image(manifest.paper, color: manifest.paperColor, size: pageSize, scale: renderScale)
-    }
-
-    /// Re-renders paper and ink at the current zoom so they stay sharp.
-    private func updateRenderScale() {
-        let scale = renderScale
-        let paperImage = currentPaperImage
-        for paper in paperViews {
-            paper.show(paperImage)
+        let zoom = canvas.zoomScale
+        let size = CGSize(width: stackSize.width * zoom, height: stackSize.height * zoom)
+        if abs(canvas.contentSize.width - size.width) > 0.5 || abs(canvas.contentSize.height - size.height) > 0.5 {
+            canvas.contentSize = size
         }
-        for canvas in activeCanvases.values {
-            setContentScale(scale, on: canvas)
-        }
+        updateUnderlayZoom()
+    }
+
+    private func updateUnderlayZoom() {
+        let zoom = canvas.zoomScale
+        underlay.transform = CGAffineTransform(scaleX: zoom, y: zoom)
+    }
+
+    private func applyInsets() {
+        let insets = UIEdgeInsets(top: 0, left: 0, bottom: view.safeAreaInsets.bottom + 80, right: 0)
+        guard canvas.contentInset != insets else { return }
+        canvas.contentInset = insets
+        canvas.verticalScrollIndicatorInsets = insets
+    }
+
+    /// Text boxes are re-rendered at the current zoom so they stay sharp;
+    /// the ink and the paper take care of themselves.
+    private func updateElementScale() {
         for layer in elementLayers.values {
-            setContentScale(scale, on: layer)
+            setContentScale(elementScale, on: layer)
         }
+    }
+
+    private var elementScale: CGFloat {
+        let screenScale = view.window?.screen.scale ?? traitCollection.displayScale
+        return min(screenScale * max(canvas.zoomScale, 1), Self.maximumElementScale)
     }
 
     private func setContentScale(_ scale: CGFloat, on view: UIView) {
@@ -203,143 +234,187 @@ public final class NotebookCanvasViewController: UIViewController {
         }
     }
 
-    // MARK: - Canvas recycling
+    // MARK: - Visible pages
+
+    /// Pages on screen right now.
+    private var visiblePages: ClosedRange<Int>? {
+        let zoom = canvas.zoomScale
+        guard pageCount > 0, zoom > 0, pageSize.height > 0 else { return nil }
+        let top = canvas.contentOffset.y / zoom
+        let bottom = (canvas.contentOffset.y + canvas.bounds.height) / zoom
+        let first = min(max(Int((top / pageSize.height).rounded(.down)), 0), pageCount - 1)
+        let last = min(max(Int((bottom / pageSize.height).rounded(.down)), first), pageCount - 1)
+        return first...last
+    }
 
     private func updateVisiblePages() {
-        guard !paperViews.isEmpty else { return }
-        let visible = scrollView.convert(scrollView.bounds, to: contentView)
-        let stride = pageSize.height + Self.pageGap
-        let first = max(0, Int(floor((visible.minY - Self.pageGap) / stride)) - 1)
-        let last = min(paperViews.count - 1, Int(floor((visible.maxY - Self.pageGap) / stride)) + 1)
-        guard first <= last else { return }
-        let wanted = Set(first...last)
+        guard let visible = visiblePages else { return }
+        let wanted = max(0, visible.lowerBound - 1)...min(pageCount - 1, visible.upperBound + 1)
 
-        for index in activeCanvases.keys where !wanted.contains(index) {
-            detachCanvas(from: index)
+        for index in elementLayers.keys where !wanted.contains(index) {
+            detachElementLayer(from: index)
         }
-        for index in wanted where activeCanvases[index] == nil {
-            attachCanvas(to: index)
+        for index in wanted where elementLayers[index] == nil {
+            attachElementLayer(to: index)
         }
 
-        let center = Int(floor((visible.midY - Self.pageGap / 2) / stride))
-        let page = min(max(center, 0), paperViews.count - 1) + 1
+        let zoom = canvas.zoomScale
+        let middle = (canvas.contentOffset.y + canvas.bounds.height / 2) / zoom
+        let page = min(max(Int((middle / pageSize.height).rounded(.down)), 0), pageCount - 1) + 1
         if model.currentPage != page {
             model.currentPage = page
-            updateRuler()
         }
     }
 
-    /// One ruler, on the page in the middle of the screen (STR-4).
-    private func updateRuler() {
-        for (index, canvas) in activeCanvases {
-            let isActive = model.isRulerActive && index == model.currentPage - 1
-            if canvas.isRulerActive != isActive {
-                canvas.isRulerActive = isActive
-            }
-        }
-    }
-
-    private func makeCanvas() -> PKCanvasView {
-        let canvas = PKCanvasView()
-        canvas.backgroundColor = .clear
-        canvas.isOpaque = false
-        canvas.isScrollEnabled = false
-        canvas.delegate = self
-        canvas.drawingPolicy = model.drawingPolicy
-        return canvas
-    }
-
-    private func attachCanvas(to index: Int) {
-        let canvas = canvasPool.popLast() ?? makeCanvas()
-        canvas.frame = frameForPage(at: index)
-        canvas.tool = model.pkTool
-        canvas.drawingPolicy = model.drawingPolicy
-        canvas.tag = index
-
-        isLoadingDrawing = true
-        canvas.drawing = loadDrawing(at: index)
-        isLoadingDrawing = false
-
-        contentView.addSubview(canvas)
-        setContentScale(renderScale, on: canvas)
-        activeCanvases[index] = canvas
-        canvas.isRulerActive = model.isRulerActive && index == model.currentPage - 1
-        canvas.isUserInteractionEnabled = model.tool != .text
-
-        // Text boxes and images sit between the paper and the ink (ADR-0014).
+    /// Text boxes and images sit between the paper and the ink (ADR-0014).
+    private func attachElementLayer(to index: Int) {
         let layer = ElementLayerView(pageID: manifest.pageIDs[index], package: package, frame: frameForPage(at: index))
         layer.onChange = { [weak self] in self?.scheduleSave() }
         layer.isEditable = model.tool == .text
         layer.textColorHex = model.color.hex
-        contentView.insertSubview(layer, belowSubview: canvas)
-        setContentScale(renderScale, on: layer)
+        underlay.addSubview(layer)
+        setContentScale(elementScale, on: layer)
         elementLayers[index] = layer
-        dimFutureInk(on: canvas, at: index)
     }
 
-    private func detachCanvas(from index: Int) {
-        if let layer = elementLayers.removeValue(forKey: index) {
-            layer.endEditing(true)
-            layer.save()
-            layer.removeFromSuperview()
+    private func detachElementLayer(from index: Int) {
+        guard let layer = elementLayers.removeValue(forKey: index) else { return }
+        layer.endEditing(true)
+        layer.save()
+        layer.removeFromSuperview()
+    }
+
+    // MARK: - Ink: one drawing on screen, one file per page
+
+    private func pageOffset(_ index: Int) -> CGAffineTransform {
+        CGAffineTransform(translationX: 0, y: CGFloat(index) * pageSize.height)
+    }
+
+    /// Reads every page and stacks the drawings into the canvas.
+    private func loadInk() {
+        var strokes: [PKStroke] = []
+        unreadablePages = []
+        for (index, id) in manifest.pageIDs.enumerated() {
+            do {
+                guard let data = try package.readPage(id) else { continue }
+                let drawing = try PKDrawing(data: data)
+                strokes.append(contentsOf: drawing.transformed(using: pageOffset(index)).strokes)
+            } catch {
+                log.error("Failed to load page \(index): \(error)")
+                unreadablePages.insert(id)
+            }
         }
-        guard let canvas = activeCanvases.removeValue(forKey: index) else { return }
-        originalDrawings[index] = nil
-        dimmedCounts[index] = nil
-        if dirtyPages.contains(index) {
-            save(canvas.drawing, at: index)
-        }
-        // Undo actions point at this canvas instance, which will show another page next.
-        undoManager?.removeAllActions(withTarget: canvas)
-        canvas.isRulerActive = false
-        canvas.removeFromSuperview()
+        let drawing = PKDrawing(strokes: strokes)
+        setDrawing(drawing)
+        savedSignatures = splitByPage(drawing).map { Self.signature(of: $0) }
+        inkIsDirty = false
+        touchedPages = []
+        originalDrawing = nil
+        dimmedCount = nil
+        dimFutureInk()
+    }
+
+    /// Changes the canvas content without marking it as edited.
+    private func setDrawing(_ drawing: PKDrawing) {
         isLoadingDrawing = true
-        canvas.drawing = PKDrawing()
+        canvas.drawing = drawing
         isLoadingDrawing = false
-        canvasPool.append(canvas)
     }
 
-    // MARK: - Persistence
-
-    private func loadDrawing(at index: Int) -> PKDrawing {
-        do {
-            guard let data = try package.readPage(manifest.pageIDs[index]) else { return PKDrawing() }
-            return try PKDrawing(data: data)
-        } catch {
-            log.error("Failed to load page \(index): \(error)")
-            return PKDrawing()
+    /// Strokes of each page, still in canvas coordinates. A stroke belongs to
+    /// the page that contains its middle.
+    private func splitByPage(_ drawing: PKDrawing) -> [[PKStroke]] {
+        var pages = Array(repeating: [PKStroke](), count: pageCount)
+        guard pageCount > 0, pageSize.height > 0 else { return pages }
+        for stroke in drawing.strokes {
+            let bounds = stroke.renderBounds
+            let middle = bounds.isNull || !bounds.midY.isFinite ? 0 : bounds.midY
+            let index = min(max(Int((middle / pageSize.height).rounded(.down)), 0), pageCount - 1)
+            pages[index].append(stroke)
         }
+        return pages
     }
 
-    private func save(_ drawing: PKDrawing, at index: Int) {
-        do {
-            try package.writePage(manifest.pageIDs[index], data: drawing.dataRepresentation())
-            dirtyPages.remove(index)
-        } catch {
-            log.error("Failed to save page \(index): \(error)")
+    /// Cheap fingerprint of a page's ink, to write only the pages that changed.
+    private static func signature(of strokes: [PKStroke]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(strokes.count)
+        for stroke in strokes {
+            let bounds = stroke.renderBounds
+            hasher.combine(stroke.path.creationDate)
+            hasher.combine(stroke.path.count)
+            hasher.combine(bounds.origin.x)
+            hasher.combine(bounds.origin.y)
+            hasher.combine(bounds.size.width)
+            hasher.combine(bounds.size.height)
+            hasher.combine(stroke.ink.inkType.rawValue)
+            hasher.combine(stroke.ink.color)
+            if let mask = stroke.mask {
+                let maskBounds = mask.bounds
+                hasher.combine(maskBounds.origin.x)
+                hasher.combine(maskBounds.origin.y)
+                hasher.combine(maskBounds.size.width)
+                hasher.combine(maskBounds.size.height)
+            }
         }
+        return hasher.finalize()
+    }
+
+    /// Writes the pages whose ink changed. Returns `true` if a file was written.
+    private func saveInk() -> Bool {
+        // During playback the canvas shows a dimmed copy: nothing to save.
+        guard inkIsDirty, playbackDate == nil else { return false }
+        let pages = splitByPage(canvas.drawing)
+        var wrote = false
+        var failed = false
+        for (index, strokes) in pages.enumerated() {
+            let signature = Self.signature(of: strokes)
+            let changed = !savedSignatures.indices.contains(index) || savedSignatures[index] != signature
+            guard changed || touchedPages.contains(index) else { continue }
+            let id = manifest.pageIDs[index]
+            if strokes.isEmpty, unreadablePages.contains(id) { continue }
+            let data = PKDrawing(strokes: strokes).transformed(using: pageOffset(index).inverted()).dataRepresentation()
+            do {
+                // A page that was on screen but did not really change keeps its file.
+                if !changed, try package.readPage(id) == data { continue }
+                try package.writePage(id, data: data)
+                unreadablePages.remove(id)
+                if savedSignatures.indices.contains(index) {
+                    savedSignatures[index] = signature
+                }
+                wrote = true
+            } catch {
+                log.error("Failed to save page \(index): \(error)")
+                failed = true
+            }
+        }
+        if !failed {
+            inkIsDirty = false
+            touchedPages = []
+        }
+        return wrote
     }
 
     private func scheduleSave() {
         saveTask?.cancel()
         saveTask = Task { [weak self] in
             try? await Task.sleep(for: Self.saveDelay)
-            guard !Task.isCancelled else { return }
-            self?.saveNow()
+            guard !Task.isCancelled, let self else { return }
+            if self.isUsingTool {
+                // Never save in the middle of a stroke: it would make the ink stutter.
+                self.scheduleSave()
+            } else {
+                self.saveNow()
+            }
         }
     }
 
     @objc func saveNow() {
         saveTask?.cancel()
-        let pending = dirtyPages
         let dirtyLayers = elementLayers.values.filter(\.isDirty)
-        guard !pending.isEmpty || !dirtyLayers.isEmpty else { return }
+        let wroteInk = saveInk()
+        guard wroteInk || !dirtyLayers.isEmpty else { return }
         dirtyLayers.forEach { $0.save() }
-        for index in pending {
-            if let canvas = activeCanvases[index] {
-                save(canvas.drawing, at: index)
-            }
-        }
         manifest.modifiedAt = .now
         writeManifest()
     }
@@ -356,52 +431,54 @@ public final class NotebookCanvasViewController: UIViewController {
 
     // MARK: - Settings
 
-    func apply(tool: PKTool, drawingPolicy: PKCanvasViewDrawingPolicy) {
+    /// Applies the tool and the input rules of the model to the canvas (ADR-0008):
+    /// - Pencil only: the Pencil writes, one finger scrolls, two fingers zoom;
+    /// - fingers write too: two fingers scroll;
+    /// - Text tool or listening: nothing writes, one finger scrolls.
+    func applySettings() {
+        guard isViewLoaded else { return }
         let isTextTool = model.tool == .text
-        for canvas in activeCanvases.values {
-            canvas.tool = tool
-            canvas.drawingPolicy = drawingPolicy
-            // With the Text tool the ink lets touches through to the text boxes.
-            canvas.isUserInteractionEnabled = !isTextTool && playbackDate == nil
-        }
-        for layer in elementLayers.values {
-            layer.isEditable = isTextTool
-            layer.textColorHex = model.color.hex
-        }
-        for canvas in canvasPool {
-            canvas.drawingPolicy = drawingPolicy
-        }
-        updateScrollGestures(drawingPolicy: drawingPolicy)
-        updateRuler()
-    }
+        let inkIsLive = !isTextTool && playbackDate == nil
 
-    /// Writing and scrolling must not compete for the same touches (ADR-0008):
-    /// - Pencil only: one finger scrolls, the Pencil never scrolls;
-    /// - fingers draw too: two fingers scroll;
-    /// - Text tool or listening: nothing draws, one finger scrolls.
-    private func updateScrollGestures(drawingPolicy: PKCanvasViewDrawingPolicy) {
-        let pan = scrollView.panGestureRecognizer
-        let inkIsLive = model.tool != .text && playbackDate == nil
-        if inkIsLive && drawingPolicy == .anyInput {
-            pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
-            pan.minimumNumberOfTouches = 2
-        } else {
-            pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
-            pan.minimumNumberOfTouches = 1
+        // Setting the same tool again would interrupt a stroke in progress.
+        let toolKey = model.toolKey
+        if toolKey != appliedToolKey {
+            appliedToolKey = toolKey
+            canvas.tool = model.pkTool
+        }
+        let policy: PKCanvasViewDrawingPolicy = inkIsLive ? model.drawingPolicy : .pencilOnly
+        if canvas.drawingPolicy != policy {
+            canvas.drawingPolicy = policy
+        }
+        if canvas.drawingGestureRecognizer.isEnabled != inkIsLive {
+            canvas.drawingGestureRecognizer.isEnabled = inkIsLive
+        }
+        if canvas.isRulerActive != model.isRulerActive {
+            canvas.isRulerActive = model.isRulerActive
+        }
+
+        // With the Text tool the ink lets touches through to the text boxes.
+        canvas.routesTouchesToElements = isTextTool
+        underlay.isUserInteractionEnabled = isTextTool
+        for layer in elementLayers.values {
+            if layer.isEditable != isTextTool {
+                layer.isEditable = isTextTool
+            }
+            layer.textColorHex = model.color.hex
         }
     }
 
     // MARK: - Commands
 
-    @objc func undo() { undoManager?.undo() }
-    @objc func redo() { undoManager?.redo() }
+    @objc func undo() { canvas.undoManager?.undo() }
+    @objc func redo() { canvas.undoManager?.redo() }
 
     func scrollToPage(_ index: Int, animated: Bool) {
-        guard paperViews.indices.contains(index) else { return }
-        let pageTop = frameForPage(at: index).minY - Self.pageGap / 2
-        let maxOffset = max(scrollView.contentSize.height - scrollView.bounds.height + scrollView.contentInset.bottom, -scrollView.contentInset.top)
-        let y = min(pageTop * scrollView.zoomScale - scrollView.contentInset.top, maxOffset)
-        scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: y), animated: animated)
+        guard index >= 0, index < pageCount else { return }
+        let top = -canvas.contentInset.top
+        let maxOffset = max(canvas.contentSize.height - canvas.bounds.height + canvas.contentInset.bottom, top)
+        let y = min(max(frameForPage(at: index).minY * canvas.zoomScale, top), maxOffset)
+        canvas.setContentOffset(CGPoint(x: canvas.contentOffset.x, y: y), animated: animated)
         if !animated {
             updateVisiblePages()
         }
@@ -414,37 +491,30 @@ public final class NotebookCanvasViewController: UIViewController {
         guard date != playbackDate else { return }
         if playbackDate == nil {
             saveNow()
+            // Undo must not bring back strokes into the dimmed copy.
+            canvas.undoManager?.removeAllActions()
         }
         playbackDate = date
         seekTap.isEnabled = date != nil
-        updateScrollGestures(drawingPolicy: model.drawingPolicy)
         if date == nil {
-            for (index, canvas) in activeCanvases {
-                if let original = originalDrawings[index] {
-                    isLoadingDrawing = true
-                    canvas.drawing = original
-                    isLoadingDrawing = false
-                }
-                canvas.isUserInteractionEnabled = model.tool != .text
+            if let originalDrawing {
+                setDrawing(originalDrawing)
             }
-            originalDrawings = [:]
-            dimmedCounts = [:]
+            originalDrawing = nil
+            dimmedCount = nil
         } else {
-            for (index, canvas) in activeCanvases {
-                dimFutureInk(on: canvas, at: index)
-            }
+            dimFutureInk()
         }
+        applySettings()
     }
 
-    private func dimFutureInk(on canvas: PKCanvasView, at index: Int) {
+    private func dimFutureInk() {
         guard let date = playbackDate else { return }
-        // No writing while listening: the canvas shows a dimmed copy.
-        canvas.isUserInteractionEnabled = false
-        let original = originalDrawings[index] ?? canvas.drawing
-        originalDrawings[index] = original
+        let original = originalDrawing ?? canvas.drawing
+        originalDrawing = original
         let future = original.strokes.filter { $0.path.creationDate > date }.count
-        guard dimmedCounts[index] != future else { return }
-        dimmedCounts[index] = future
+        guard dimmedCount != future else { return }
+        dimmedCount = future
         var dimmed = original
         dimmed.strokes = original.strokes.map { stroke in
             guard stroke.path.creationDate > date else { return stroke }
@@ -452,19 +522,17 @@ public final class NotebookCanvasViewController: UIViewController {
             copy.ink = PKInk(stroke.ink.inkType, color: stroke.ink.color.withAlphaComponent(0.15))
             return copy
         }
-        isLoadingDrawing = true
-        canvas.drawing = dimmed
-        isLoadingDrawing = false
+        setDrawing(dimmed)
     }
 
     /// During playback, tapping a stroke jumps to when it was written.
     @objc private func handleSeekTap(_ gesture: UITapGestureRecognizer) {
-        let point = gesture.location(in: contentView)
-        guard let index = paperViews.indices.first(where: { frameForPage(at: $0).contains(point) }),
-              let drawing = originalDrawings[index] ?? activeCanvases[index]?.drawing
-        else { return }
-        let pagePoint = CGPoint(x: point.x - frameForPage(at: index).minX, y: point.y - frameForPage(at: index).minY)
-        let hit = drawing.strokes.last { $0.renderBounds.insetBy(dx: -12, dy: -12).contains(pagePoint) }
+        let zoom = canvas.zoomScale
+        guard zoom > 0 else { return }
+        let location = gesture.location(in: canvas)
+        let point = CGPoint(x: location.x / zoom, y: location.y / zoom)
+        let drawing = originalDrawing ?? canvas.drawing
+        let hit = drawing.strokes.last { $0.renderBounds.insetBy(dx: -12, dy: -12).contains(point) }
         if let hit {
             model.onSeek?(hit.path.creationDate)
         }
@@ -473,9 +541,9 @@ public final class NotebookCanvasViewController: UIViewController {
     /// Adds an image to the page in the middle of the screen (STR-9).
     func insertImage(_ data: Data) {
         guard let image = UIImage(data: data), let jpeg = Self.prepareImage(image) else { return }
-        let index = model.currentPage - 1
+        let index = min(max(model.currentPage - 1, 0), pageCount - 1)
         if elementLayers[index] == nil {
-            attachCanvas(to: index)
+            attachElementLayer(to: index)
         }
         do {
             let fileName = try package.writeAsset(jpeg, fileExtension: "jpg")
@@ -502,22 +570,24 @@ public final class NotebookCanvasViewController: UIViewController {
     /// Changes the paper of every page (PAG-5).
     func setPaper(_ style: PaperStyle, color: PaperColor) {
         guard style != manifest.paper || color != manifest.paperColor else { return }
+        saveNow()
         manifest.paper = style
         manifest.paperColor = color
         model.paper = style
         model.paperColor = color
-        changePages { _ in }
+        manifest.modifiedAt = .now
+        writeManifest()
+        layoutPages()
     }
 
-    /// Rebuilds every page after the page list changed (PAG-4).
+    /// Rebuilds the canvas after the page list changed (PAG-4).
     private func reloadPages() {
-        for index in Array(activeCanvases.keys) {
-            detachCanvas(from: index)
+        for index in Array(elementLayers.keys) {
+            detachElementLayer(from: index)
         }
-        undoManager?.removeAllActions()
-        paperViews.forEach { $0.removeFromSuperview() }
-        paperViews.removeAll()
-        buildPages()
+        loadInk()
+        canvas.undoManager?.removeAllActions()
+        layoutPages()
         updateVisiblePages()
     }
 
@@ -536,13 +606,12 @@ public final class NotebookCanvasViewController: UIViewController {
     func insertPage(at index: Int, scrollToIt: Bool) {
         let index = min(max(index, 0), manifest.pageIDs.count)
         if index == manifest.pageIDs.count {
-            // Appending is cheap: no need to rebuild the other pages.
-            saveNow()
+            // Appending keeps the ink, the undo history and the stroke in progress.
             manifest.pageIDs.append(UUID())
+            savedSignatures.append(Self.signature(of: []))
             manifest.modifiedAt = .now
             writeManifest()
-            addPaperView(at: paperViews.count)
-            updateContentSize()
+            layoutPages()
             updateVisiblePages()
         } else {
             changePages { $0.insert(UUID(), at: index) }
@@ -582,28 +651,14 @@ public final class NotebookCanvasViewController: UIViewController {
     }
 }
 
-// MARK: - UIScrollViewDelegate
-
-extension NotebookCanvasViewController: UIScrollViewDelegate {
-    public func viewForZooming(in scrollView: UIScrollView) -> UIView? { contentView }
-
-    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        updateVisiblePages()
-    }
-
-    public func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
-        updateRenderScale()
-        updateVisiblePages()
-    }
-}
-
 // MARK: - Shape recognition (STR-7, ADR-0013)
 
 extension NotebookCanvasViewController {
     /// After a stroke, if the Pencil was held still at its end, replaces the
     /// stroke with the clean shape it resembles.
-    func recognizeShape(on canvas: PKCanvasView) {
-        let countBefore = strokeCountAtToolStart.removeValue(forKey: ObjectIdentifier(canvas)) ?? canvas.drawing.strokes.count
+    func recognizeShape() {
+        let countBefore = strokeCountAtToolStart ?? canvas.drawing.strokes.count
+        strokeCountAtToolStart = nil
         // Only the stroke just written: a gesture that added nothing must not
         // reshape an older stroke.
         guard model.shapeRecognition, model.tool.isInking, canvas.drawing.strokes.count > countBefore,
@@ -649,27 +704,46 @@ extension NotebookCanvasViewController: UIPencilInteractionDelegate {
     }
 }
 
-// MARK: - PKCanvasViewDelegate
+// MARK: - PKCanvasViewDelegate (and its scroll view)
 
 extension NotebookCanvasViewController: PKCanvasViewDelegate {
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        updateVisiblePages()
+    }
+
+    public func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        updateUnderlayZoom()
+    }
+
+    public func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        updateContentSize()
+        updateElementScale()
+        updateVisiblePages()
+    }
+
     public func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
-        strokeCountAtToolStart[ObjectIdentifier(canvasView)] = canvasView.drawing.strokes.count
+        isUsingTool = true
+        strokeCountAtToolStart = canvasView.drawing.strokes.count
     }
 
     public func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
-        recognizeShape(on: canvasView)
+        isUsingTool = false
+        recognizeShape()
     }
 
     public func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
         guard !isLoadingDrawing else { return }
-        let index = canvasView.tag
-        dirtyPages.insert(index)
+        inkIsDirty = true
+        // The change is where the user is working; the fingerprints catch the rest.
+        if let visible = visiblePages {
+            touchedPages.formUnion(visible)
+        }
         scheduleSave()
 
-        let isLastPage = index == paperViews.count - 1
         let bounds = canvasView.drawing.bounds
-        if model.autoNewPage, isLastPage, !bounds.isEmpty, bounds.maxY > pageSize.height - Self.autoNewPageThreshold {
-            insertPage(at: paperViews.count, scrollToIt: false)
+        if model.autoNewPage, !bounds.isNull, !bounds.isEmpty,
+           bounds.maxY > stackSize.height - Self.autoNewPageThreshold {
+            insertPage(at: pageCount, scrollToIt: false)
         }
     }
 }
@@ -698,13 +772,10 @@ public struct NotebookCanvas: UIViewControllerRepresentable {
     public func updateUIViewController(_ controller: UIViewController, context: Context) {
         guard let controller = controller as? NotebookCanvasViewController else { return }
         // Reading the model here makes SwiftUI call this again when a setting changes.
+        _ = model.toolKey
         _ = model.isRulerActive
-        _ = model.colorIndex
-        controller.apply(tool: model.pkTool, drawingPolicy: model.drawingPolicy)
+        _ = model.fingerDrawing
         controller.updatePlayback(model.playbackDate)
-        _ = model.topContentInset
-        if controller.isViewLoaded {
-            controller.applyInsets()
-        }
+        controller.applySettings()
     }
 }

@@ -8,7 +8,6 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.fingerDrawing) private var fingerDrawing = false
     @AppStorage(SettingsKey.autoNewPage) private var autoNewPage = true
     @AppStorage(SettingsKey.defaultEraser) private var defaultEraser = EraserMode.partial.rawValue
-    @AppStorage(SettingsKey.toolbarPosition) private var toolbarPosition = ToolbarPosition.top
     @AppStorage(SettingsKey.pencilTapAction) private var pencilTap = PencilAction.system.rawValue
     @AppStorage(SettingsKey.pencilSqueezeAction) private var pencilSqueeze = PencilAction.system.rawValue
     @Environment(LibraryStore.self) private var store
@@ -63,14 +62,6 @@ struct SettingsView: View {
                     Text(verbatim: "Apple Pencil")
                 } footer: {
                     Text("Squeeze works with Apple Pencil Pro.")
-                }
-
-                Section("Toolbar") {
-                    Picker("Position", selection: $toolbarPosition) {
-                        ForEach(ToolbarPosition.allCases) { option in
-                            Label(option.title, systemImage: option.symbolName).tag(option)
-                        }
-                    }
                 }
 
                 Section {
