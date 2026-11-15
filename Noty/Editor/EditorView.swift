@@ -490,7 +490,7 @@ struct EditorToolbar: View {
 struct BarButton: View {
     let title: LocalizedStringKey
     let systemImage: String
-    let action: () -> Void
+    let action: @MainActor () -> Void
 
     var body: some View {
         Button(action: action) {
@@ -562,8 +562,8 @@ struct WidthPopover: View {
     }
 
     static func dotSize(_ width: CGFloat, tool: ToolKind) -> CGFloat {
-        let range = range(for: tool)
-        let normalized = (min(max(width, range.lowerBound), range.upperBound) - range.lowerBound) / (range.upperBound - range.lowerBound)
+        let limits = Self.range(for: tool)
+        let normalized = (min(max(width, limits.lowerBound), limits.upperBound) - limits.lowerBound) / (limits.upperBound - limits.lowerBound)
         return 5 + normalized * 23
     }
 
