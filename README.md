@@ -36,7 +36,7 @@ Versione 0.6 in sviluppo: libreria, scrittura, forme, testo e immagini, registra
 Un tag `v*` (es. `git tag -a v0.6.0 -m "Noty 0.6" && git push origin v0.6.0`) avvia la Action `Release`: compila l'`.ipa` non firmato con il flag `ALTSTORE` e prepara una release in bozza. Scrivi le note e pubblicala; il sito la mostra al deploy successivo.
 
 ## Sostieni
-Noty resterà sempre gratuita. Se vuoi contribuire alle spese (Apple Developer Program, dominio, server): [Open Collective](https://opencollective.com/paluello). Entrate e spese sono pubbliche.
+Noty resterà sempre gratuita. Se vuoi contribuire alle spese (Apple Developer Program, dominio, server): [Open Collective](https://opencollective.com/paluello-me). Entrate e spese sono pubbliche.
 
 ## Contribuire
 Leggi [CONTRIBUTING.md](CONTRIBUTING.md).
