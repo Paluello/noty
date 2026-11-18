@@ -58,7 +58,7 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
     /// Added in 0.3; missing in older notebooks, which are white.
     public var paperColor: PaperColor
     /// Distance between lines, squares or dots, in page points; `nil` is the
-    /// default of the style. Added in 0.7.
+    /// default of the style. Added in 0.6.
     public var paperSpacing: Double?
     public var orientation: PageOrientation
     public var pageIDs: [UUID]
