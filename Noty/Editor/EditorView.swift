@@ -47,10 +47,6 @@ struct EditorView: View {
             NotebookCanvas(package: package, model: model, topInset: isFocusMode ? 0 : barHeight)
                 .ignoresSafeArea()
             if !isFocusMode {
-                // Keeps the clock and battery readable when a page is under them.
-                Color.clear
-                    .frame(height: 0)
-                    .background(.ultraThinMaterial, ignoresSafeAreaEdges: .top)
                 EditorToolbar(
                     model: model,
                     title: title,
@@ -590,29 +586,26 @@ struct BarButton: View {
     }
 }
 
-/// Bar buttons react on the whole target and show clearly which one is on.
+/// Bar buttons react on the whole target and show clearly which one is on,
+/// with the system's Liquid Glass only: no painted fills or materials.
 struct BarButtonStyle: ButtonStyle {
-    /// Filled with the accent color: the current tool.
+    /// Accent-tinted glass: the current tool.
     var isSelected = false
-    /// Softly tinted: the current width.
+    /// Softly tinted glass: the current width or text size.
     var isHighlighted = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(isSelected ? AnyShapeStyle(Color.white) : AnyShapeStyle(.foreground))
-            .background {
-                Capsule()
-                    .fill(fill(isPressed: configuration.isPressed))
-                    .padding(2)
-            }
-            .contentShape(.rect)
-            .opacity(configuration.isPressed && isSelected ? 0.8 : 1)
+            .contentShape(.capsule)
+            .glassEffect(glass, in: .capsule)
+            .opacity(configuration.isPressed ? 0.75 : 1)
     }
 
-    private func fill(isPressed: Bool) -> Color {
-        if isSelected { return .accentColor }
-        if isPressed { return Color.primary.opacity(0.16) }
-        return Color.primary.opacity(isHighlighted ? 0.1 : 0)
+    private var glass: Glass {
+        if isSelected { return .regular.tint(.accentColor).interactive() }
+        if isHighlighted { return .regular.tint(.accentColor.opacity(0.25)).interactive() }
+        return .identity
     }
 }
 
@@ -620,8 +613,7 @@ extension View {
     /// One group of the editor bar: a Liquid Glass capsule, like the library's.
     func glassCapsule() -> some View {
         padding(3)
-            .clipShape(.capsule)
-            .glassEffect(.regular, in: .capsule)
+            .glassEffect(.regular.interactive(), in: .capsule)
     }
 }
 

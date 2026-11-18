@@ -12,7 +12,7 @@ La barra resta in alto e su due righe, ma diventa **capsule di vetro flottanti**
 
 - La tela occupa tutto lo schermo e ha un **margine superiore** pari all'altezza della barra: in cima al quaderno la prima pagina parte sotto le capsule. Scorrendo, le pagine passano sotto il vetro.
 - Lo strumento attivo ha lo sfondo pieno del colore d'accento; ogni bersaglio resta di almeno 44 pt.
-- Dietro la tela c'è lo stesso sfondo sfumato della libreria; sotto l'orologio una striscia di materiale tiene leggibile la barra di stato.
+- Dietro la tela c'è lo stesso sfondo sfumato della libreria. Solo Liquid Glass di sistema (`glassEffect` interattivo dentro un `GlassEffectContainer`): niente materiali, sfocature o riempimenti dipinti; lo strumento attivo è vetro colorato con l'accento.
 - Un indicatore di pagina in vetro, non toccabile, sta in basso a destra.
 - In modalità concentrazione il margine si azzera insieme alla barra.
 
