@@ -1,6 +1,17 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "NSCameraUsageDescription": {
+      "comment": "Privacy - Camera Usage Description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noty usa la fotocamera per scansionare documenti nelle pagine."
+          }
+        }
+      }
+    },
     "NSFaceIDUsageDescription": {
       "comment": "Privacy - Face ID Usage Description",
       "localizations": {

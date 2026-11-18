@@ -16,7 +16,7 @@ Grazie! Prima di iniziare:
 - Codice e commit in inglese; stile Swift API Design Guidelines, `swift-format`
 - Test per tutto ciò che riguarda `NotyCore` (soprattutto il formato dei file: **mai perdere dati**)
 - Le stringhe UI vanno nel String Catalog, sempre con la traduzione italiana
-- Commit firmati DCO: `git commit -s`
+- Commit firmati DCO: `git commit -s`. Contribuendo accetti che il tuo codice sia distribuito sotto GPL-3.0-or-later con il permesso aggiuntivo per l'App Store ([LICENSE-EXCEPTION.md](LICENSE-EXCEPTION.md), [ADR-0022](docs/adr/0022-eccezione-app-store.md))
 - Una PR = una modifica; screenshot o video per le modifiche UI
 
 ## Codice di condotta

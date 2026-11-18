@@ -51,3 +51,11 @@ jobs:
             -destination "generic/platform=iOS Simulator" \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify
+
+      - name: Build the AltStore variant
+        run: |
+          xcodebuild build -project Noty.xcodeproj -scheme Noty \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) ALTSTORE' \
+            | xcbeautify

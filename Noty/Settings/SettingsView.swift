@@ -133,6 +133,18 @@ struct SettingsView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+
+                #if ALTSTORE
+                // Only in the AltStore build: App Store rules don't allow
+                // donations outside in-app purchase.
+                Section {
+                    Link(destination: URL(string: "https://noty.paluello.me/#sostieni")!) {
+                        Label("Support Noty", systemImage: "heart")
+                    }
+                } footer: {
+                    Text("Donations cover the cost of bringing Noty to the App Store.")
+                }
+                #endif
             }
             .sheet(item: $exportedArchive) { file in
                 ShareSheet(url: file.url)

@@ -1,7 +1,7 @@
 # Noty
 
-
 App per prendere appunti a mano su iPad, **semplice, gratuita, senza pubblicità e open source**.
+Sito: **[noty.paluello.me](https://noty.paluello.me)**
 È pensata per lo studio: quaderni organizzati in cartelle, pagine stampabili e scrittura con Apple Pencil.
 
 ## Principi
@@ -11,7 +11,7 @@ App per prendere appunti a mano su iPad, **semplice, gratuita, senza pubblicità
 - **Nativa Apple**: SwiftUI + PencilKit, aspetto minimal coerente con iPadOS.
 
 ## Stato
-Versione 0.1 in sviluppo: le funzioni base ci sono, mancano le prove su iPad vero. Vedi [roadmap](docs/roadmap.md).
+Versione 0.6 in sviluppo: libreria, scrittura, forme, testo e immagini, registrazione delle lezioni, ricerca nella scrittura, esportazione. Mancano le prove complete su iPad vero. Vedi [roadmap](docs/roadmap.md).
 
 ## Documentazione
 | Documento | Contenuto |
@@ -27,12 +27,19 @@ Versione 0.1 in sviluppo: le funzioni base ci sono, mancano le prove su iPad ver
 | [Formato dei file](docs/file-format.md) | Com'è fatto un quaderno `.noty` |
 | [Domande aperte](docs/open-questions.md) | Cose ancora da decidere |
 
-## Installazione (quando ci sarà una build)
+## Installazione
+- **AltStore / SideStore**: aggiungi la sorgente `https://noty.paluello.me/altstore.json` e ricevi gli aggiornamenti, oppure scarica l'`.ipa` allegato a ogni [release](https://github.com/paluello/noty/releases).
+- **App Store**: arriverà quando le donazioni ricorrenti copriranno i 99 € annui dell'Apple Developer Program ([ADR-0022](docs/adr/0022-eccezione-app-store.md)).
 - **Da sorgente**: apri `Noty.xcodeproj` con Xcode 26, scegli un iPad (o il simulatore) e premi Run. Test: `cd Packages/NotyKit && xcodebuild test -scheme NotyKit-Package -destination 'platform=iOS Simulator,name=<iPad>'`.
-- **AltStore**: file `.ipa` allegato a ogni release su GitHub.
+
+## Release
+Un tag `v*` (es. `git tag -a v0.6.0 -m "Noty 0.6" && git push origin v0.6.0`) avvia la Action `Release`: compila l'`.ipa` non firmato con il flag `ALTSTORE` e prepara una release in bozza. Scrivi le note e pubblicala; il sito la mostra al deploy successivo.
+
+## Sostieni
+Noty resterà sempre gratuita. Se vuoi contribuire alle spese (Apple Developer Program, dominio, server): [Open Collective](https://opencollective.com/paluello). Entrate e spese sono pubbliche.
 
 ## Contribuire
 Leggi [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licenza
-GPL-3.0-or-later. Distribuzione tramite AltStore; vedi [ADR-0011](docs/adr/0011-licenza-gpl.md).
+GPL-3.0-or-later con un [permesso aggiuntivo per l'App Store](LICENSE-EXCEPTION.md). Vedi [ADR-0011](docs/adr/0011-licenza-gpl.md) e [ADR-0022](docs/adr/0022-eccezione-app-store.md).

@@ -1,5 +1,5 @@
 # ADR-0011: Licenza GPL-3.0-or-later e distribuzione tramite AltStore
-- **Stato**: Accettato · **Data**: 2026-10-09
+- **Stato**: Sostituito in parte da [ADR-0022](0022-eccezione-app-store.md) (App Store) · **Data**: 2026-10-09
 
 ## Contesto
 Progetto pubblico con contributi; vogliamo garantire che il codice e i fork restino aperti.
