@@ -44,7 +44,7 @@ Priorità: **M** = obbligatorio, **S** = importante, **C** = se c'è tempo. Vers
 ## Interfaccia
 | ID | Requisito | Priorità | Versione |
 |---|---|---|---|
-| UI-1 | Barra strumenti fissa in alto, su due righe: strumenti sopra, opzioni dello strumento sotto (ADR-0021; fino alla 0.5 era spostabile) | M | 0.2 |
+| UI-1 | Barra strumenti in alto, su due righe di capsule in Liquid Glass flottanti: strumenti sopra, opzioni dello strumento sotto (ADR-0021, ADR-0023; fino alla 0.5 era spostabile) | M | 0.2 |
 | UI-2 | Modalità concentrazione: nasconde tutto tranne la pagina | S | 0.2 |
 | UI-3 | Tema chiaro/scuro per l'interfaccia (la pagina resta chiara) | M | 0.1 |
 | UI-4 | Supporto a Split View e Stage Manager (più finestre) | S | 0.2 |
@@ -66,5 +66,5 @@ Priorità: **M** = obbligatorio, **S** = importante, **C** = se c'è tempo. Vers
 | DAT-3 | Esporta quaderno in PDF | M | 0.1 |
 | DAT-4 | "Esporta tutto": archivio con PDF e file originali | M | 0.2 |
 | DAT-5 | Formato aperto e documentato | M | 0.1 |
-| DAT-6 | Libreria in una cartella esterna (NAS/SMB tramite app File) | C | 0.6 |
+| DAT-6 | Libreria in una cartella esterna (NAS/SMB tramite app File) | C | 0.3 (ADR-0018) |
 | DAT-7 | Blocco con Face ID/Touch ID, attivabile per app o per quaderno | S | 0.3 |

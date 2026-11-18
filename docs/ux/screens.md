@@ -40,7 +40,7 @@ Come Apple Music su iPadOS 26: una **barra delle sezioni in vetro**, in alto al 
  │                                              │ 3/12 ││
  └──────────────────────────────────────────────╰──────╯┘
 ```
-- **Capsule in vetro flottanti in alto** (ADR-0022), come la barra della libreria. Sopra: indietro, titolo e pagina "3 / 12" (apre le pagine) · strumenti · annulla/ripeti, registra, menu "⋯". Sotto, al centro: le opzioni dello strumento attivo, sempre visibili (3 spessori, 8 colori, righello; tipo di gomma; immagini per il testo).
+- **Capsule in vetro flottanti in alto** (ADR-0023), come la barra della libreria. Sopra: indietro, titolo e pagina "3 / 12" (apre le pagine) · strumenti · annulla/ripeti, registra, menu "⋯". Sotto, al centro: le opzioni dello strumento attivo, sempre visibili (3 spessori, 8 colori, righello; tipo di gomma; immagini per il testo).
 - In cima al quaderno la prima pagina parte **sotto** le capsule; scorrendo, le pagine passano sotto il vetro.
 - In basso a destra un piccolo indicatore "3 / 12" (solo lettura).
 - Tocca lo spessore già selezionato per regolarlo; tieni premuto sui colori per cambiare palette.

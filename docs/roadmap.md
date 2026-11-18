@@ -7,7 +7,7 @@
 | **0.3 — "Arricchisco"** | Contenuti | STR-7,8,9 · PAG-3,5 · DAT-2 (iCloud), DAT-7 (Face ID) |
 | **0.4 — "Ascolto"** | Audio | AUD-1,2,3 |
 | **0.5** | Ricerca | ORG-8 (OCR con Vision, on-device) |
-| **0.6** | Libertà | DAT-6 (cartella esterna/NAS) |
+| **0.6** | Editor rifatto | Tela unica (ADR-0020), barra in Liquid Glass (ADR-0023); DAT-6 anticipato alla 0.3 (ADR-0018) |
 | **1.0** | Stabile | Bug fix, accessibilità, docs in inglese, release AltStore stabile |
 | **dopo la 1.0** | | Viewer iPhone (ADR-0016), annotazione PDF, cifratura |
 
@@ -56,7 +56,6 @@ Motivo: su iPad vero la penna era in ritardo, il tratto sfarfallava, la scrittur
 
 Implementato: una sola tela PencilKit per tutto il quaderno, che scorre e zooma in modo nativo (ADR-0020); carta a tasselli, nitida a ogni zoom; salvataggio che non parte mai a metà tratto; barra fissa in alto su due righe con le opzioni dello strumento sempre visibili (ADR-0021). Rimosse le posizioni sinistra / destra / flottante della barra.
 
-Non ancora provato: la build è stata verificata solo dalla CI (compilazione e test dei pacchetti), non nel simulatore né su iPad.
 Da verificare su iPad vero: latenza e nitidezza con la Pencil, zoom, strumento Testo sopra la tela unica, ascolto con inchiostro sbiadito, apertura di quaderni lunghi (tempo e memoria), barra in Split View.
 
 Aggiunto il 18 novembre 2026, prima della release: barra in capsule di Liquid Glass di sistema (ADR-0023); zoom fino al 30% con la pagina centrata; quattro grandezze del testo ed elenchi puntati e numerati; pulsante Inserisci separato per foto, file e scansioni; distanza di righe, quadretti e pallini per quaderno, con il valore predefinito nelle Impostazioni; eliminazione delle palette con conferma. Provato da Mattia su iPad il 18 novembre 2026.
