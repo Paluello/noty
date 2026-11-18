@@ -30,3 +30,4 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0020](0020-tela-unica.md) | Un'unica tela PencilKit che scorre e zooma da sola | Accettato |
 | [0021](0021-barra-fissa-due-righe.md) | Barra dell'editor fissa in alto, su due righe | Accettato |
 | [0022](0022-eccezione-app-store.md) | Eccezione alla GPL per l'App Store | Accettato |
+| [0023](0023-barra-in-vetro-flottante.md) | Barra dell'editor in capsule di vetro, flottanti sopra la pagina | Accettato |

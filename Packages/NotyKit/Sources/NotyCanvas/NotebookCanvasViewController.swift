@@ -207,11 +207,29 @@ public final class NotebookCanvasViewController: UIViewController {
         underlay.transform = CGAffineTransform(scaleX: zoom, y: zoom)
     }
 
+    /// Height of the editor bar floating over the top of the canvas (ADR-0022).
+    /// The first page starts below it; while scrolling, pages pass under it.
+    var chromeInset: CGFloat = 0 {
+        didSet {
+            guard chromeInset != oldValue, isViewLoaded else { return }
+            applyInsets()
+        }
+    }
+
     private func applyInsets() {
-        let insets = UIEdgeInsets(top: 0, left: 0, bottom: view.safeAreaInsets.bottom + 80, right: 0)
-        guard canvas.contentInset != insets else { return }
+        let insets = UIEdgeInsets(
+            top: view.safeAreaInsets.top + chromeInset, left: 0,
+            bottom: view.safeAreaInsets.bottom + 80, right: 0
+        )
+        let old = canvas.contentInset
+        guard old != insets else { return }
+        // At the top of the notebook, stay at the top when the bar appears or hides.
+        let wasAtTop = canvas.contentOffset.y <= -old.top + 1
         canvas.contentInset = insets
         canvas.verticalScrollIndicatorInsets = insets
+        if wasAtTop, !canvas.isTracking, !canvas.isZooming {
+            canvas.contentOffset.y = -insets.top
+        }
     }
 
     /// Text boxes are re-rendered at the current zoom so they stay sharp;
@@ -754,15 +772,20 @@ extension NotebookCanvasViewController: PKCanvasViewDelegate {
 public struct NotebookCanvas: UIViewControllerRepresentable {
     let package: NotebookPackage
     let model: EditorModel
+    /// Space taken at the top by the floating editor bar (ADR-0022).
+    let topInset: CGFloat
 
-    public init(package: NotebookPackage, model: EditorModel) {
+    public init(package: NotebookPackage, model: EditorModel, topInset: CGFloat = 0) {
         self.package = package
         self.model = model
+        self.topInset = topInset
     }
 
     public func makeUIViewController(context: Context) -> UIViewController {
         do {
-            return try NotebookCanvasViewController(package: package, model: model)
+            let controller = try NotebookCanvasViewController(package: package, model: model)
+            controller.chromeInset = topInset
+            return controller
         } catch {
             log.error("Failed to open notebook: \(error)")
             return UIHostingController(rootView: Text(verbatim: "⚠︎"))
@@ -775,6 +798,7 @@ public struct NotebookCanvas: UIViewControllerRepresentable {
         _ = model.toolKey
         _ = model.isRulerActive
         _ = model.fingerDrawing
+        controller.chromeInset = topInset
         controller.updatePlayback(model.playbackDate)
         controller.applySettings()
     }
