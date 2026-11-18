@@ -9,18 +9,23 @@ struct PaperSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var style: PaperStyle
     @State private var color: PaperColor
+    @State private var spacing: Double?
 
     init(model: EditorModel) {
         self.model = model
         _style = State(initialValue: model.paper)
         _color = State(initialValue: model.paperColor)
+        _spacing = State(initialValue: model.paperSpacing)
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    PaperStylePicker(style: $style, color: color)
+                    PaperStylePicker(style: $style, color: color, spacing: spacing)
+                    if style != .blank {
+                        PaperSpacingSlider(style: style, spacing: $spacing)
+                    }
                     PaperColorPicker(color: $color)
                     Text("The new paper applies to every page. Your writing stays as it is.")
                         .font(.footnote)
@@ -36,13 +41,17 @@ struct PaperSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark", role: .confirm) {
-                        model.setPaper(style, color: color)
+                        model.setPaper(style, color: color, spacing: style == .blank ? nil : spacing)
                         dismiss()
                     }
                 }
             }
         }
         .presentationDetents([.medium, .large])
+        .onChange(of: style) { _, newStyle in
+            // Lines and squares are measured differently: start from the default.
+            spacing = newStyle == model.paper ? model.paperSpacing : PaperSpacing.defaultValue(for: newStyle)
+        }
     }
 }
 
@@ -50,6 +59,8 @@ struct PaperSheet: View {
 struct PaperStylePicker: View {
     @Binding var style: PaperStyle
     var color: PaperColor = .white
+    /// Spacing of the selected style; the others show their default.
+    var spacing: Double?
 
     var body: some View {
         HStack(spacing: 14) {
@@ -58,7 +69,7 @@ struct PaperStylePicker: View {
                     style = option
                 } label: {
                     VStack(spacing: 8) {
-                        PaperPreview(style: option, color: color)
+                        PaperPreview(style: option, color: color, spacing: option == style ? spacing : PaperSpacing.defaultValue(for: option))
                             .overlay {
                                 RoundedRectangle(cornerRadius: 6)
                                     .strokeBorder(Color.accentColor, lineWidth: style == option ? 3 : 0)

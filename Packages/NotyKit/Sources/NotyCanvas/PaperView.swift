@@ -5,6 +5,8 @@ import UIKit
 struct PaperConfiguration: Equatable, Sendable {
     var style = PaperStyle.blank
     var color = PaperColor.white
+    /// Distance between lines, squares or dots; `nil` is the style's default.
+    var spacing: CGFloat?
     var pageSize = CGSize.zero
     var pageCount = 0
 }
@@ -61,7 +63,7 @@ final class PaperTiledLayer: CATiledLayer {
             context.setFillColor(configuration.color.uiColor.cgColor)
             context.fill(pageRect)
             context.translateBy(x: 0, y: pageRect.minY)
-            PaperRenderer.draw(configuration.style, in: CGRect(origin: .zero, size: size), context: context)
+            PaperRenderer.draw(configuration.style, in: CGRect(origin: .zero, size: size), context: context, spacing: configuration.spacing)
             if index > 0 {
                 // Page break: a thin line, like a continuous notebook.
                 context.setStrokeColor(Self.separatorColor.cgColor)
@@ -117,6 +119,8 @@ extension PaperColor {
 public enum PaperRenderer {
     static let lineSpacing: CGFloat = 24
     static let gridSpacing: CGFloat = 20
+    /// Limits of the spacing a notebook can choose, in page points (3–15 mm).
+    public static let spacingRange: ClosedRange<Double> = 8.5...42.5
     static let topMargin: CGFloat = 72
     static let leftMargin: CGFloat = 64
 
@@ -129,11 +133,20 @@ public enum PaperRenderer {
         max(1, 0.5 / (0.6 * scale))
     }
 
+    /// Distance between lines, squares or dots when the notebook does not choose one.
+    public static func defaultSpacing(for style: PaperStyle) -> Double {
+        style == .lined ? Double(lineSpacing) : Double(gridSpacing)
+    }
+
     /// Draws the pattern in page coordinates; also used for PDF export.
-    /// `lineScale` thickens lines and dots for small previews.
-    public static func draw(_ style: PaperStyle, in bounds: CGRect, context: CGContext, lineScale: CGFloat = 1) {
+    /// `lineScale` thickens lines and dots for small previews; `spacing` is the
+    /// distance between lines, squares or dots (`nil`: the style's default).
+    public static func draw(_ style: PaperStyle, in bounds: CGRect, context: CGContext, lineScale: CGFloat = 1, spacing: CGFloat? = nil) {
         context.saveGState()
         defer { context.restoreGState() }
+        let step = min(max(spacing ?? CGFloat(defaultSpacing(for: style)), CGFloat(spacingRange.lowerBound)), CGFloat(spacingRange.upperBound))
+        let lineSpacing = style == .lined ? step : Self.lineSpacing
+        let gridSpacing = style == .lined ? Self.gridSpacing : step
 
         switch style {
         case .blank:

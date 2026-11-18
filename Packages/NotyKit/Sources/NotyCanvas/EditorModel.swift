@@ -30,6 +30,14 @@ public enum ToolKind: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// A list a text box can turn its lines into.
+public enum TextListStyle: Sendable {
+    /// `• ` before every line.
+    case bulleted
+    /// `1. `, `2. `… before every line.
+    case numbered
+}
+
 public enum EraserMode: String, CaseIterable, Sendable {
     /// Removes only the touched part of a stroke.
     case partial
@@ -89,6 +97,13 @@ public final class EditorModel {
     ]
     public var widthIndex: [ToolKind: Int] = [.pen: 1, .pencil: 1, .highlighter: 1]
 
+    /// Text sizes offered by the Text tool, in page points.
+    public static let textSizes: [Double] = [13, 18, 26, 36]
+    /// Size of new text boxes and of the selected one.
+    public var textFontSize: Double = 18
+    /// A text box is selected: list commands apply to it.
+    public internal(set) var isTextSelected = false
+
     /// When `false`, only Apple Pencil draws and fingers scroll and zoom (ADR-0008).
     public var fingerDrawing = false
     /// Writing near the bottom of the last page adds a new page.
@@ -105,6 +120,8 @@ public final class EditorModel {
     public var initialPage: Int?
     public internal(set) var paper = PaperStyle.lined
     public internal(set) var paperColor = PaperColor.white
+    /// Distance between lines, squares or dots; `nil` is the style's default.
+    public internal(set) var paperSpacing: Double?
     public var pencilTapAction = PencilAction.system
     public var pencilSqueezeAction = PencilAction.system
 
@@ -144,8 +161,13 @@ public final class EditorModel {
     }
 
     /// Changes the paper of the whole notebook (PAG-5).
-    public func setPaper(_ style: PaperStyle, color: PaperColor) {
-        canvasController?.setPaper(style, color: color)
+    public func setPaper(_ style: PaperStyle, color: PaperColor, spacing: Double?) {
+        canvasController?.setPaper(style, color: color, spacing: spacing)
+    }
+
+    /// Turns the lines of the selected text box into a list, or back to plain lines.
+    public func toggleList(_ style: TextListStyle) {
+        canvasController?.toggleList(style)
     }
 
     /// Runs the action chosen for a Pencil double tap or squeeze.

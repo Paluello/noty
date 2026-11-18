@@ -322,18 +322,31 @@ struct EditorToolbar: View {
                 .accessibilityLabel(tool.title)
                 .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
             }
+            Divider()
+                .frame(height: 26)
+                .padding(.horizontal, 4)
+            insertMenu
         }
+    }
+
+    /// Photos, files and scans have their own button, next to the tools.
+    private var insertMenu: some View {
+        Menu {
+            InsertImageButtons(onInsert: onInsertImage)
+        } label: {
+            Image(systemName: "photo.badge.plus")
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 48, height: 44)
+                .contentShape(.rect)
+        }
+        .tint(.primary)
+        .accessibilityLabel(Text("Insert Image"))
     }
 
     private var moreMenu: some View {
         Menu {
             Button("Pages", systemImage: "square.grid.2x2", action: onShowPages)
             Button("Add Page", systemImage: "plus.rectangle.portrait", action: model.addPageAtEnd)
-            Menu {
-                InsertImageButtons(onInsert: onInsertImage)
-            } label: {
-                Label("Insert Image", systemImage: "photo.badge.plus")
-            }
             Button("Paper", systemImage: "doc.richtext", action: onShowPaper)
             if !audio.recordings.isEmpty {
                 Divider()
@@ -383,13 +396,11 @@ struct EditorToolbar: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             case .text:
+                textSizes
+                separator
                 colors
                 separator
-                HStack(spacing: 8) {
-                    InsertImageButtons(onInsert: onInsertImage)
-                }
-                .buttonStyle(.bordered)
-                .tint(.primary)
+                listButtons
             }
         }
         .padding(.horizontal, 12)
@@ -469,6 +480,44 @@ struct EditorToolbar: View {
             Divider()
             Button("Manage Palettes…", systemImage: "paintpalette", action: onShowPalettes)
         }
+    }
+
+    /// Text sizes, from small to extra large. They apply to new text
+    /// boxes and to the selected one.
+    private var textSizes: some View {
+        HStack(spacing: 2) {
+            ForEach(Array(EditorModel.textSizes.enumerated()), id: \.offset) { index, size in
+                let isSelected = model.textFontSize == size
+                Button {
+                    model.textFontSize = size
+                } label: {
+                    Text(verbatim: "A")
+                        .font(.system(size: 12 + CGFloat(size) * 0.32, weight: .medium))
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(BarButtonStyle(isHighlighted: isSelected))
+                .accessibilityLabel(textSizeTitle(index))
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+    }
+
+    private func textSizeTitle(_ index: Int) -> LocalizedStringKey {
+        switch index {
+        case 0: "Small"
+        case 1: "Medium"
+        case 2: "Large"
+        default: "Extra Large"
+        }
+    }
+
+    /// Bulleted and numbered lists for the selected text box.
+    private var listButtons: some View {
+        HStack(spacing: 2) {
+            BarButton(title: "Bulleted List", systemImage: "list.bullet") { model.toggleList(.bulleted) }
+            BarButton(title: "Numbered List", systemImage: "list.number") { model.toggleList(.numbered) }
+        }
+        .disabled(!model.isTextSelected)
     }
 
     /// The ruler is a switch, not a tool: it stays on while you write (STR-4).
@@ -597,7 +646,7 @@ extension ToolKind {
         case .highlighter: "Highlighter"
         case .eraser: "Eraser"
         case .lasso: "Lasso"
-        case .text: "Text and Images"
+        case .text: "Text"
         }
     }
 }

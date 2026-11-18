@@ -252,9 +252,12 @@ final class LibraryStore {
         perform { try library.createFolder(named: name, in: parent) }
     }
 
-    func createNotebook(title: String, in parent: URL, paper: PaperStyle, paperColor: PaperColor, orientation: PageOrientation, cover: CoverDraft) -> NotebookPackage? {
+    func createNotebook(title: String, in parent: URL, paper: PaperStyle, paperColor: PaperColor, paperSpacing: Double?, orientation: PageOrientation, cover: CoverDraft) -> NotebookPackage? {
         perform {
-            let package = try library.createNotebook(title: title, in: parent, paper: paper, paperColor: paperColor, orientation: orientation, cover: .color(index: 0))
+            let package = try library.createNotebook(
+                title: title, in: parent, paper: paper, paperColor: paperColor, paperSpacing: paperSpacing,
+                orientation: orientation, cover: .color(index: 0)
+            )
             try applyCover(cover, to: package)
             return package
         }

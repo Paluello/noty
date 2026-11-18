@@ -33,7 +33,9 @@ public final class NotebookCanvasViewController: UIViewController {
     static let saveDelay: Duration = .seconds(1)
     /// Writing below this distance from the bottom of the last page adds a new page.
     static let autoNewPageThreshold: CGFloat = 120
-    /// Zoom range, relative to the page fitting the screen width.
+    /// Zoom range, relative to the page fitting the screen width: zooming
+    /// out below the fit shows the page smaller, centered on the desk.
+    static let minimumZoom: CGFloat = 0.3
     static let maximumZoom: CGFloat = 5
     /// Text boxes are rasterized at most at this scale.
     static let maximumElementScale: CGFloat = 10
@@ -86,6 +88,7 @@ public final class NotebookCanvasViewController: UIViewController {
         model.pageIDs = manifest.pageIDs
         model.paper = manifest.paper
         model.paperColor = manifest.paperColor
+        model.paperSpacing = manifest.paperSpacing
     }
 
     @available(*, unavailable)
@@ -154,7 +157,7 @@ public final class NotebookCanvasViewController: UIViewController {
 
         // Fit the page width to the screen; zoom in from there.
         let fit = width / pageSize.width
-        canvas.minimumZoomScale = fit
+        canvas.minimumZoomScale = fit * Self.minimumZoom
         canvas.maximumZoomScale = fit * Self.maximumZoom
         canvas.zoomScale = fit
         updateContentSize()
@@ -162,7 +165,7 @@ public final class NotebookCanvasViewController: UIViewController {
             scrollToPage(initialPage, animated: false)
             model.initialPage = nil
         } else if isFirstLayout {
-            canvas.contentOffset = CGPoint(x: 0, y: -canvas.contentInset.top)
+            canvas.contentOffset = CGPoint(x: -canvas.contentInset.left, y: -canvas.contentInset.top)
         } else {
             scrollToPage(page, animated: false)
         }
@@ -188,7 +191,8 @@ public final class NotebookCanvasViewController: UIViewController {
         underlay.center = .zero
         paperView.frame = underlay.bounds
         paperView.update(PaperConfiguration(
-            style: manifest.paper, color: manifest.paperColor, pageSize: pageSize, pageCount: pageCount
+            style: manifest.paper, color: manifest.paperColor, spacing: manifest.paperSpacing.map { CGFloat($0) },
+            pageSize: pageSize, pageCount: pageCount
         ))
         updateContentSize()
     }
@@ -200,6 +204,7 @@ public final class NotebookCanvasViewController: UIViewController {
             canvas.contentSize = size
         }
         updateUnderlayZoom()
+        applyInsets()
     }
 
     private func updateUnderlayZoom() {
@@ -207,11 +212,19 @@ public final class NotebookCanvasViewController: UIViewController {
         underlay.transform = CGAffineTransform(scaleX: zoom, y: zoom)
     }
 
+    /// Below the fit zoom the pages are narrower than the screen: the insets
+    /// keep them centered instead of pinned to the left edge.
     private func applyInsets() {
-        let insets = UIEdgeInsets(top: 0, left: 0, bottom: view.safeAreaInsets.bottom + 80, right: 0)
+        let zoom = canvas.zoomScale
+        let width = stackSize.width * zoom
+        let height = stackSize.height * zoom
+        let bottom = view.safeAreaInsets.bottom + 80
+        let side = max(0, (canvas.bounds.width - width) / 2).rounded(.down)
+        let top = max(0, (canvas.bounds.height - bottom - height) / 2).rounded(.down)
+        let insets = UIEdgeInsets(top: top, left: side, bottom: bottom, right: side)
         guard canvas.contentInset != insets else { return }
         canvas.contentInset = insets
-        canvas.verticalScrollIndicatorInsets = insets
+        canvas.verticalScrollIndicatorInsets = UIEdgeInsets(top: 0, left: 0, bottom: bottom, right: 0)
     }
 
     /// Text boxes are re-rendered at the current zoom so they stay sharp;
@@ -272,6 +285,11 @@ public final class NotebookCanvasViewController: UIViewController {
         layer.onChange = { [weak self] in self?.scheduleSave() }
         layer.isEditable = model.tool == .text
         layer.textColorHex = model.color.hex
+        layer.textFontSize = model.textFontSize
+        layer.onSelectText = { [weak self, weak layer] size in
+            guard let self, let layer else { return }
+            self.textSelectionChanged(in: layer, size: size)
+        }
         underlay.addSubview(layer)
         setContentScale(elementScale, on: layer)
         elementLayers[index] = layer
@@ -282,6 +300,34 @@ public final class NotebookCanvasViewController: UIViewController {
         layer.endEditing(true)
         layer.save()
         layer.removeFromSuperview()
+        updateTextSelection()
+    }
+
+    /// One text box at a time: selecting one deselects the others, and the bar
+    /// shows the size of the selected box.
+    private func textSelectionChanged(in layer: ElementLayerView, size: Double?) {
+        if size != nil {
+            for other in elementLayers.values where other !== layer {
+                other.clearSelection()
+            }
+        }
+        if let size, model.textFontSize != size {
+            model.textFontSize = size
+        }
+        updateTextSelection(size != nil)
+    }
+
+    private func updateTextSelection(_ isSelectedHere: Bool = false) {
+        let isSelected = isSelectedHere || elementLayers.values.contains { $0.selectedTextSize != nil }
+        if model.isTextSelected != isSelected {
+            model.isTextSelected = isSelected
+        }
+    }
+
+    func toggleList(_ style: TextListStyle) {
+        for layer in elementLayers.values where layer.toggleList(style) {
+            return
+        }
     }
 
     // MARK: - Ink: one drawing on screen, one file per page
@@ -465,6 +511,7 @@ public final class NotebookCanvasViewController: UIViewController {
                 layer.isEditable = isTextTool
             }
             layer.textColorHex = model.color.hex
+            layer.textFontSize = model.textFontSize
         }
     }
 
@@ -568,13 +615,15 @@ public final class NotebookCanvasViewController: UIViewController {
     }
 
     /// Changes the paper of every page (PAG-5).
-    func setPaper(_ style: PaperStyle, color: PaperColor) {
-        guard style != manifest.paper || color != manifest.paperColor else { return }
+    func setPaper(_ style: PaperStyle, color: PaperColor, spacing: Double?) {
+        guard style != manifest.paper || color != manifest.paperColor || spacing != manifest.paperSpacing else { return }
         saveNow()
         manifest.paper = style
         manifest.paperColor = color
+        manifest.paperSpacing = spacing
         model.paper = style
         model.paperColor = color
+        model.paperSpacing = spacing
         manifest.modifiedAt = .now
         writeManifest()
         layoutPages()
@@ -713,6 +762,7 @@ extension NotebookCanvasViewController: PKCanvasViewDelegate {
 
     public func scrollViewDidZoom(_ scrollView: UIScrollView) {
         updateUnderlayZoom()
+        applyInsets()
     }
 
     public func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
@@ -775,6 +825,7 @@ public struct NotebookCanvas: UIViewControllerRepresentable {
         _ = model.toolKey
         _ = model.isRulerActive
         _ = model.fingerDrawing
+        _ = model.textFontSize
         controller.updatePlayback(model.playbackDate)
         controller.applySettings()
     }

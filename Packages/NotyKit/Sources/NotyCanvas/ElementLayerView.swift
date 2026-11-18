@@ -37,6 +37,24 @@ final class ElementLayerView: UIView {
     var onChange: (() -> Void)?
     /// Color for new text boxes: the current palette color.
     var textColorHex = "#000000"
+    /// Size of new text boxes; changing it resizes the selected one too.
+    var textFontSize = ElementLayerView.defaultFontSize {
+        didSet {
+            guard textFontSize != oldValue, let id = selectedID, let text = views[id] as? TextElementView else { return }
+            setFontSize(textFontSize, of: id, view: text)
+        }
+    }
+    /// Called when the selection changes, with the size of the selected text
+    /// box, or `nil` when no text box is selected.
+    var onSelectText: ((Double?) -> Void)?
+
+    /// Size of the selected text box, if a text box is selected.
+    var selectedTextSize: Double? {
+        guard let id = selectedID, let element = elements.first(where: { $0.id == id }),
+              case .text(_, let size, _) = element.content
+        else { return nil }
+        return size
+    }
 
     var isEditable = false {
         didSet {
@@ -101,7 +119,7 @@ final class ElementLayerView: UIView {
         let x = max(16, min(point.x, bounds.maxX - 200))
         let width = min(320, bounds.maxX - x - 16)
         let element = PageElement(
-            content: .text(string: "", fontSize: Self.defaultFontSize, colorHex: textColorHex),
+            content: .text(string: "", fontSize: textFontSize, colorHex: textColorHex),
             frame: CGRect(x: x, y: max(0, point.y - 22), width: width, height: 44)
         )
         elements.append(element)
@@ -172,10 +190,39 @@ final class ElementLayerView: UIView {
     }
 
     private func select(_ id: UUID?) {
+        let changed = selectedID != id
         selectedID = id
         for (viewID, view) in views {
             view.isSelected = viewID == id
         }
+        if changed {
+            onSelectText?(selectedTextSize)
+        }
+    }
+
+    func clearSelection() {
+        guard selectedID != nil else { return }
+        endEditing(true)
+        select(nil)
+    }
+
+    private func setFontSize(_ size: Double, of id: UUID, view: TextElementView) {
+        view.setFontSize(size)
+        update(id) { element in
+            if case .text(let string, _, let color) = element.content {
+                element.content = .text(string: string, fontSize: size, colorHex: color)
+            }
+            element.frame = view.frame
+        }
+    }
+
+    /// Turns the lines of the selected text box into a list. Returns `false`
+    /// when no text box is selected.
+    @discardableResult
+    func toggleList(_ style: TextListStyle) -> Bool {
+        guard let id = selectedID, let text = views[id] as? TextElementView else { return false }
+        text.toggleList(style)
+        return true
     }
 
     private func changed() {
@@ -340,6 +387,64 @@ final class TextElementView: ElementView, UITextViewDelegate {
         onFrameChange?(frame)
     }
 
+    func setFontSize(_ size: Double) {
+        textView.font = .systemFont(ofSize: size)
+        fitHeight()
+    }
+
+    // MARK: Lists
+
+    /// Pressing Return in a list line continues the list; on an empty item it ends it.
+    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        guard text == "\n", range.length == 0 else { return true }
+        let string = textView.text as NSString
+        let lineRange = string.lineRange(for: NSRange(location: range.location, length: 0))
+        let line = string.substring(with: lineRange).trimmingCharacters(in: .newlines)
+        guard let marker = ListMarker(line: line) else { return true }
+        if line.count == marker.prefix.count {
+            // Return on an empty item: the list ends here.
+            replace(NSRange(location: lineRange.location, length: marker.prefix.utf16.count), with: "", selection: lineRange.location)
+        } else {
+            let insert = "\n" + marker.next.prefix
+            replace(range, with: insert, selection: range.location + insert.utf16.count)
+        }
+        return false
+    }
+
+    /// Adds `• ` or `1. ` before the selected lines, or removes it when they
+    /// all have it already. Without a cursor it applies to the whole box.
+    func toggleList(_ style: TextListStyle) {
+        let string = textView.text as NSString
+        let selection = textView.isFirstResponder ? textView.selectedRange : NSRange(location: 0, length: string.length)
+        let range = string.paragraphRange(for: selection)
+        var lines = string.substring(with: range).components(separatedBy: "\n")
+        let endsWithNewline = lines.count > 1 && lines.last == ""
+        if endsWithNewline { lines.removeLast() }
+
+        let isAlreadyList = lines.allSatisfy { line in
+            guard let marker = ListMarker(line: line) else { return line.isEmpty }
+            return marker.style == style
+        } && lines.contains { !$0.isEmpty }
+        var number = 0
+        let newLines = lines.map { line -> String in
+            let body = ListMarker(line: line).map { String(line.dropFirst($0.prefix.count)) } ?? line
+            if isAlreadyList { return body }
+            number += 1
+            return ListMarker(style: style, number: number).prefix + body
+        }
+        var replacement = newLines.joined(separator: "\n")
+        if endsWithNewline { replacement += "\n" }
+        let caret = range.location + (replacement as NSString).length - (endsWithNewline ? 1 : 0)
+        replace(range, with: replacement, selection: caret)
+    }
+
+    private func replace(_ range: NSRange, with replacement: String, selection: Int) {
+        let string = textView.text as NSString
+        textView.text = string.replacingCharacters(in: range, with: replacement)
+        textView.selectedRange = NSRange(location: min(selection, (textView.text as NSString).length), length: 0)
+        textViewDidChange(textView)
+    }
+
     func textViewDidEndEditing(_ textView: UITextView) {
         textView.isEditable = false
         textView.isUserInteractionEnabled = false
@@ -382,5 +487,43 @@ final class ImageElementView: ElementView {
     override func resized(_ start: CGRect, by translation: CGPoint) -> CGRect {
         let width = max(40, start.width + translation.x)
         return CGRect(origin: start.origin, size: CGSize(width: width, height: width * start.height / max(start.width, 1)))
+    }
+}
+
+/// The marker at the start of a list line: `• ` or `12. `.
+struct ListMarker: Equatable {
+    static let bullet = "• "
+
+    let style: TextListStyle
+    let number: Int
+
+    init(style: TextListStyle, number: Int) {
+        self.style = style
+        self.number = number
+    }
+
+    /// The marker `line` starts with, if any.
+    init?(line: String) {
+        if line.hasPrefix(Self.bullet) {
+            self.init(style: .bulleted, number: 0)
+            return
+        }
+        let digits = line.prefix { $0.isASCII && $0.isNumber }
+        guard !digits.isEmpty, digits.count <= 4, let number = Int(digits),
+              line.dropFirst(digits.count).hasPrefix(". ")
+        else { return nil }
+        self.init(style: .numbered, number: number)
+    }
+
+    var prefix: String {
+        switch style {
+        case .bulleted: Self.bullet
+        case .numbered: "\(number). "
+        }
+    }
+
+    /// The marker of the item after this one.
+    var next: ListMarker {
+        ListMarker(style: style, number: style == .numbered ? number + 1 : 0)
     }
 }

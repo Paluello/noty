@@ -11,6 +11,7 @@ struct NewNotebookSheet: View {
     @State private var title = ""
     @State private var paper = PaperStyle.lined
     @State private var paperColor = PaperColor.white
+    @State private var paperSpacing = PaperSpacing.defaultValue(for: .lined)
     @State private var orientation = PageOrientation.portrait
     @State private var cover = CoverDraft.color(Int.random(in: 0..<Cover.colorCount))
 
@@ -21,7 +22,7 @@ struct NewNotebookSheet: View {
                     HStack(alignment: .bottom, spacing: 20) {
                         CoverView(cover: cover, title: displayTitle)
                             .frame(width: 150)
-                        PaperPreview(style: paper, orientation: orientation, color: paperColor)
+                        PaperPreview(style: paper, orientation: orientation, color: paperColor, spacing: paperSpacing)
                             .frame(width: orientation == .portrait ? 110 : 150)
                     }
                     .frame(maxWidth: .infinity)
@@ -34,7 +35,10 @@ struct NewNotebookSheet: View {
 
                     section("Paper") {
                         VStack(alignment: .leading, spacing: 16) {
-                            PaperStylePicker(style: $paper, color: paperColor)
+                            PaperStylePicker(style: $paper, color: paperColor, spacing: paperSpacing)
+                            if paper != .blank {
+                                PaperSpacingSlider(style: paper, spacing: $paperSpacing)
+                            }
                             PaperColorPicker(color: $paperColor)
                         }
                     }
@@ -63,6 +67,9 @@ struct NewNotebookSheet: View {
                     Button("Create", systemImage: "checkmark", role: .confirm) { create() }
                 }
             }
+            .onChange(of: paper) { _, newPaper in
+                paperSpacing = PaperSpacing.defaultValue(for: newPaper)
+            }
         }
     }
 
@@ -83,7 +90,7 @@ struct NewNotebookSheet: View {
     }
 
     private func create() {
-        guard let package = store.createNotebook(title: displayTitle, in: folder, paper: paper, paperColor: paperColor, orientation: orientation, cover: cover) else { return }
+        guard let package = store.createNotebook(title: displayTitle, in: folder, paper: paper, paperColor: paperColor, paperSpacing: paper == .blank ? nil : paperSpacing, orientation: orientation, cover: cover) else { return }
         dismiss()
         onCreate(package)
     }

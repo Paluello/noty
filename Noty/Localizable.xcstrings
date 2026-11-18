@@ -171,6 +171,16 @@
         }
       }
     },
+    "Bulleted List": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elenco puntato"
+          }
+        }
+      }
+    },
     "Cancel": {
       "localizations": {
         "it": {
@@ -361,6 +371,16 @@
         }
       }
     },
+    "Delete Palette": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina palette"
+          }
+        }
+      }
+    },
     "Delete Recording": {
       "localizations": {
         "it": {
@@ -401,6 +421,16 @@
         }
       }
     },
+    "Delete “%@”?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare “%@”?"
+          }
+        }
+      }
+    },
     "Deleted %@": {
       "localizations": {
         "it": {
@@ -417,6 +447,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "I quaderni eliminati restano qui per 30 giorni."
+          }
+        }
+      }
+    },
+    "Denser": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più fitto"
           }
         }
       }
@@ -449,6 +489,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fine"
+          }
+        }
+      }
+    },
+    "Dot Spacing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distanza tra i pallini"
           }
         }
       }
@@ -549,6 +599,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Esporta PDF"
+          }
+        }
+      }
+    },
+    "Extra Large": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Molto grande"
           }
         }
       }
@@ -733,6 +793,16 @@
         }
       }
     },
+    "Large": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grande"
+          }
+        }
+      }
+    },
     "Lasso": {
       "localizations": {
         "it": {
@@ -779,6 +849,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chiaro"
+          }
+        }
+      }
+    },
+    "Line Spacing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distanza tra le righe"
           }
         }
       }
@@ -839,6 +919,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Margine"
+          }
+        }
+      }
+    },
+    "Medium": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medio"
           }
         }
       }
@@ -953,6 +1043,16 @@
         }
       }
     },
+    "New notebooks start with this spacing. Each notebook can change it from Paper in the editor menu.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I nuovi quaderni partono da questa distanza. Ogni quaderno può cambiarla da Carta nel menu dell'editor."
+          }
+        }
+      }
+    },
     "No Favorites": {
       "localizations": {
         "it": {
@@ -1049,6 +1149,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noty è bloccata"
+          }
+        }
+      }
+    },
+    "Numbered List": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elenco numerato"
           }
         }
       }
@@ -1453,6 +1563,16 @@
         }
       }
     },
+    "Small": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Piccolo"
+          }
+        }
+      }
+    },
     "Something went wrong": {
       "localizations": {
         "it": {
@@ -1473,12 +1593,32 @@
         }
       }
     },
+    "Spacing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distanza"
+          }
+        }
+      }
+    },
     "Speed": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Velocità"
+          }
+        }
+      }
+    },
+    "Square Size": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grandezza dei quadretti"
           }
         }
       }
@@ -1575,12 +1715,12 @@
         }
       }
     },
-    "Text and Images": {
+    "Text": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Testo e immagini"
+            "value": "Testo"
           }
         }
       }
@@ -1745,6 +1885,16 @@
         }
       }
     },
+    "Wider": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più largo"
+          }
+        }
+      }
+    },
     "Width": {
       "localizations": {
         "it": {
@@ -1781,6 +1931,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Scrittura"
+          }
+        }
+      }
+    },
+    "Your writing keeps its colors. The Standard palette is used instead.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quello che hai scritto mantiene i suoi colori. Al suo posto si usa la palette Standard."
           }
         }
       }

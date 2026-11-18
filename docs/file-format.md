@@ -32,6 +32,7 @@ Nome.noty/
   "cover" : { "color" : { "index" : 3 } },
   "paper" : "lined",
   "paperColor" : "white",
+  "paperSpacing" : 20,
   "orientation" : "portrait",
   "isLocked" : false,
   "pageIDs" : [ "A1B2…", "C3D4…" ],
@@ -44,6 +45,7 @@ Nome.noty/
 | `cover` | `{"color": {"index": 0…11}}` oppure `{"image": {"fileName": "cover-….jpg"}}` |
 | `paper` | `blank`, `lined`, `grid`, `dotted` |
 | `paperColor` | `white`, `ivory`, `gray`; se manca (quaderni della 0.1/0.2) vale `white` |
+| `paperSpacing` | distanza tra righe, quadretti o pallini, in punti della pagina (8,5–42,5, cioè 3–15 mm); se manca vale quella standard dello stile (righe 24, quadretti e pallini 20). Aggiunto nella 0.7 |
 | `isLocked` | `true` se il quaderno si apre solo con Face ID o il codice; se manca vale `false` |
 | `orientation` | `portrait`, `landscape`; le pagine sono sempre A4 (595 × 842 pt) |
 | `pageIDs` | ordine delle pagine; ogni id corrisponde a `pages/<id>.drawing` |

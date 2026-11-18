@@ -31,12 +31,14 @@ import Testing
         #expect(manifest.title == "Vecchio")
         #expect(manifest.paperColor == .white)
         #expect(manifest.isLocked == false)
+        #expect(manifest.paperSpacing == nil)
     }
 
     @Test func newFieldsRoundTrip() throws {
         var manifest = try package.readManifest()
         manifest.paperColor = .ivory
         manifest.isLocked = true
+        manifest.paperSpacing = 17
         try package.writeManifest(manifest)
         #expect(try package.readManifest() == manifest)
     }
