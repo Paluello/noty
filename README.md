@@ -11,7 +11,7 @@ Sito: **[noty.paluello.me](https://noty.paluello.me)**
 - **Nativa Apple**: SwiftUI + PencilKit, aspetto minimal coerente con iPadOS.
 
 ## Stato
-Versione 0.6 in sviluppo: libreria, scrittura, forme, testo e immagini, registrazione delle lezioni, ricerca nella scrittura, esportazione. Mancano le prove complete su iPad vero. Vedi [roadmap](docs/roadmap.md).
+Versione 0.6, prima release per AltStore e SideStore: libreria, scrittura, forme, testo e immagini, registrazione delle lezioni, ricerca nella scrittura, esportazione. Mancano le prove complete su iPad vero. Vedi [roadmap](docs/roadmap.md).
 
 ## Documentazione
 | Documento | Contenuto |
