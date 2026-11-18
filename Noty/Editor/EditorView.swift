@@ -3,7 +3,7 @@ import NotyCore
 import PhotosUI
 import SwiftUI
 
-/// Screen 3: the notebook editor: a docked two-row bar above a continuous page.
+/// Screen 3: the notebook editor: glass capsules floating over a continuous page (ADR-0023).
 struct EditorView: View {
     let package: NotebookPackage
     /// Closes the editor; by default it dismisses the full-screen cover.
@@ -27,6 +27,8 @@ struct EditorView: View {
     @State private var model = EditorModel()
     @State private var title = ""
     @State private var isFocusMode = false
+    /// Height of the floating bar, so the first page starts below it.
+    @State private var barHeight: CGFloat = 0
     @State private var isShowingPages = false
     @State private var isShowingPalettes = false
     @State private var sharedPDF: SharedFile?
@@ -38,9 +40,12 @@ struct EditorView: View {
     @State private var isLocked = false
 
     var body: some View {
-        // The bar is docked above the page, never over it: nothing covers the
-        // paper and the page does not move when a tool changes.
-        VStack(spacing: 0) {
+        // The bar floats in glass over the page (ADR-0023). At the top of the
+        // notebook the first page starts below it; while scrolling, the pages
+        // pass under the glass.
+        ZStack(alignment: .top) {
+            NotebookCanvas(package: package, model: model, topInset: isFocusMode ? 0 : barHeight)
+                .ignoresSafeArea()
             if !isFocusMode {
                 EditorToolbar(
                     model: model,
@@ -55,12 +60,25 @@ struct EditorView: View {
                     onShowPaper: { isShowingPaper = true },
                     onRecord: startRecording
                 )
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 }
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
-            NotebookCanvas(package: package, model: model)
-                .ignoresSafeArea(edges: isFocusMode ? .all : [.bottom, .horizontal])
         }
-        .background(Color(uiColor: .secondarySystemBackground).ignoresSafeArea())
+        .background { AmbientBackground() }
+        .overlay(alignment: .bottomTrailing) {
+            if !audio.isBusy {
+                // Only shows where you are; the page list opens from the title.
+                Text(verbatim: "\(model.currentPage) / \(model.pageCount)")
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .glassEffect(.regular, in: .capsule)
+                    .padding(16)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .overlay(alignment: .topTrailing) {
             if isFocusMode {
                 Button("Exit Focus Mode", systemImage: "arrow.down.right.and.arrow.up.left") {
@@ -222,9 +240,10 @@ enum ImageSource {
     case photos, files, scanner
 }
 
-/// The editor bar (ADR-0007, ADR-0021), docked at the top in two rows:
-/// commands and tools above, the options of the current tool below.
-/// Everything is one tap away and every target is at least 44 pt.
+/// The editor bar (ADR-0007, ADR-0021, ADR-0023): Liquid Glass capsules
+/// floating at the top. Commands and tools above, the options of the current
+/// tool in a capsule below. Everything is one tap away and every target is
+/// at least 44 pt.
 struct EditorToolbar: View {
     @Bindable var model: EditorModel
     let title: String
@@ -242,46 +261,58 @@ struct EditorToolbar: View {
     @State private var isEditingWidth = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Narrow windows first drop the title, then let the tools scroll.
-            ViewThatFits(in: .horizontal) {
-                commandRow(showsTitle: true, scrollsTools: false)
-                commandRow(showsTitle: false, scrollsTools: false)
-                commandRow(showsTitle: false, scrollsTools: true)
+        GlassEffectContainer(spacing: Self.rowSpacing) {
+            VStack(spacing: Self.rowSpacing) {
+                // Narrow windows first drop the title, then let the tools scroll.
+                ViewThatFits(in: .horizontal) {
+                    commandRow(showsTitle: true, scrollsTools: false)
+                    commandRow(showsTitle: false, scrollsTools: false)
+                    commandRow(showsTitle: false, scrollsTools: true)
+                }
+                ViewThatFits(in: .horizontal) {
+                    optionsRow.glassCapsule()
+                    ScrollView(.horizontal, showsIndicators: false) { optionsRow }
+                        .glassCapsule()
+                }
+                .animation(.snappy, value: model.tool)
             }
-            .frame(height: 52)
-            Divider()
-            ViewThatFits(in: .horizontal) {
-                optionsRow
-                ScrollView(.horizontal, showsIndicators: false) { optionsRow }
-            }
-            .frame(height: 50)
-            Divider()
+            .padding(.horizontal, 12)
+            .padding(.top, 6)
+            .padding(.bottom, Self.rowSpacing)
         }
-        .background(Color(uiColor: .systemBackground))
     }
+
+    private static let rowSpacing: CGFloat = 8
 
     // MARK: - Row 1: commands and tools
 
     private func commandRow(showsTitle: Bool, scrollsTools: Bool) -> some View {
-        HStack(spacing: 2) {
-            BarButton(title: "Library", systemImage: "chevron.left", action: onClose)
-            pagesButton(showsTitle: showsTitle)
-            Spacer(minLength: 8)
-            if scrollsTools {
-                ScrollView(.horizontal, showsIndicators: false) { tools }
-            } else {
-                tools
+        HStack(spacing: 0) {
+            HStack(spacing: 0) {
+                BarButton(title: "Library", systemImage: "chevron.left", action: onClose)
+                pagesButton(showsTitle: showsTitle)
             }
+            .glassCapsule()
             Spacer(minLength: 8)
-            BarButton(title: "Undo", systemImage: "arrow.uturn.backward", action: model.undo)
-            BarButton(title: "Redo", systemImage: "arrow.uturn.forward", action: model.redo)
-            BarButton(title: "Record Audio", systemImage: audio.isRecording ? "mic.fill" : "mic", action: onRecord)
-                .foregroundStyle(audio.isRecording ? Color.red : Color.primary)
-                .disabled(audio.isRecording)
-            moreMenu
+            Group {
+                if scrollsTools {
+                    ScrollView(.horizontal, showsIndicators: false) { tools }
+                } else {
+                    tools
+                }
+            }
+            .glassCapsule()
+            Spacer(minLength: 8)
+            HStack(spacing: 0) {
+                BarButton(title: "Undo", systemImage: "arrow.uturn.backward", action: model.undo)
+                BarButton(title: "Redo", systemImage: "arrow.uturn.forward", action: model.redo)
+                BarButton(title: "Record Audio", systemImage: audio.isRecording ? "mic.fill" : "mic", action: onRecord)
+                    .foregroundStyle(audio.isRecording ? Color.red : Color.primary)
+                    .disabled(audio.isRecording)
+                moreMenu
+            }
+            .glassCapsule()
         }
-        .padding(.horizontal, 8)
     }
 
     /// Notebook title and page counter; opens the page manager.
@@ -300,7 +331,8 @@ struct EditorToolbar: View {
                     .foregroundStyle(.secondary)
             }
             .font(.callout)
-            .padding(.horizontal, 10)
+            .padding(.leading, 8)
+            .padding(.trailing, 14)
             .frame(height: 44)
         }
         .buttonStyle(BarButtonStyle())
@@ -322,18 +354,31 @@ struct EditorToolbar: View {
                 .accessibilityLabel(tool.title)
                 .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
             }
+            Divider()
+                .frame(height: 26)
+                .padding(.horizontal, 4)
+            insertMenu
         }
+    }
+
+    /// Photos, files and scans have their own button, next to the tools.
+    private var insertMenu: some View {
+        Menu {
+            InsertImageButtons(onInsert: onInsertImage)
+        } label: {
+            Image(systemName: "photo.badge.plus")
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 48, height: 44)
+                .contentShape(.rect)
+        }
+        .tint(.primary)
+        .accessibilityLabel(Text("Insert Image"))
     }
 
     private var moreMenu: some View {
         Menu {
             Button("Pages", systemImage: "square.grid.2x2", action: onShowPages)
             Button("Add Page", systemImage: "plus.rectangle.portrait", action: model.addPageAtEnd)
-            Menu {
-                InsertImageButtons(onInsert: onInsertImage)
-            } label: {
-                Label("Insert Image", systemImage: "photo.badge.plus")
-            }
             Button("Paper", systemImage: "doc.richtext", action: onShowPaper)
             if !audio.recordings.isEmpty {
                 Divider()
@@ -382,18 +427,18 @@ struct EditorToolbar: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .padding(.horizontal, 8)
             case .text:
+                textSizes
+                separator
                 colors
                 separator
-                HStack(spacing: 8) {
-                    InsertImageButtons(onInsert: onInsertImage)
-                }
-                .buttonStyle(.bordered)
-                .tint(.primary)
+                listButtons
+                    .padding(.trailing, 4)
             }
         }
-        .padding(.horizontal, 12)
-        .frame(maxHeight: .infinity)
+        .padding(.horizontal, 4)
+        .frame(height: 44)
     }
 
     private var separator: some View {
@@ -471,6 +516,44 @@ struct EditorToolbar: View {
         }
     }
 
+    /// Text sizes, from small to extra large. They apply to new text
+    /// boxes and to the selected one.
+    private var textSizes: some View {
+        HStack(spacing: 2) {
+            ForEach(Array(EditorModel.textSizes.enumerated()), id: \.offset) { index, size in
+                let isSelected = model.textFontSize == size
+                Button {
+                    model.textFontSize = size
+                } label: {
+                    Text(verbatim: "A")
+                        .font(.system(size: 12 + CGFloat(size) * 0.32, weight: .medium))
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(BarButtonStyle(isHighlighted: isSelected))
+                .accessibilityLabel(textSizeTitle(index))
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+    }
+
+    private func textSizeTitle(_ index: Int) -> LocalizedStringKey {
+        switch index {
+        case 0: "Small"
+        case 1: "Medium"
+        case 2: "Large"
+        default: "Extra Large"
+        }
+    }
+
+    /// Bulleted and numbered lists for the selected text box.
+    private var listButtons: some View {
+        HStack(spacing: 2) {
+            BarButton(title: "Bulleted List", systemImage: "list.bullet") { model.toggleList(.bulleted) }
+            BarButton(title: "Numbered List", systemImage: "list.number") { model.toggleList(.numbered) }
+        }
+        .disabled(!model.isTextSelected)
+    }
+
     /// The ruler is a switch, not a tool: it stays on while you write (STR-4).
     private var rulerButton: some View {
         Button {
@@ -503,30 +586,34 @@ struct BarButton: View {
     }
 }
 
-/// Bar buttons react on the whole target and show clearly which one is on.
+/// Bar buttons react on the whole target and show clearly which one is on,
+/// with the system's Liquid Glass only: no painted fills or materials.
 struct BarButtonStyle: ButtonStyle {
-    /// Filled with the accent color: the current tool.
+    /// Accent-tinted glass: the current tool.
     var isSelected = false
-    /// Softly tinted: the current width.
+    /// Softly tinted glass: the current width or text size.
     var isHighlighted = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(isSelected ? AnyShapeStyle(Color.white) : AnyShapeStyle(.foreground))
-            .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(fill(isPressed: configuration.isPressed))
-                    .padding(.vertical, 3)
-                    .padding(.horizontal, 2)
-            }
-            .contentShape(.rect)
-            .opacity(configuration.isPressed && isSelected ? 0.8 : 1)
+            .contentShape(.capsule)
+            .glassEffect(glass, in: .capsule)
+            .opacity(configuration.isPressed ? 0.75 : 1)
     }
 
-    private func fill(isPressed: Bool) -> Color {
-        if isSelected { return .accentColor }
-        if isPressed { return Color.primary.opacity(0.16) }
-        return Color.primary.opacity(isHighlighted ? 0.1 : 0)
+    private var glass: Glass {
+        if isSelected { return .regular.tint(.accentColor).interactive() }
+        if isHighlighted { return .regular.tint(.accentColor.opacity(0.25)).interactive() }
+        return .identity
+    }
+}
+
+extension View {
+    /// One group of the editor bar: a Liquid Glass capsule, like the library's.
+    func glassCapsule() -> some View {
+        padding(3)
+            .glassEffect(.regular.interactive(), in: .capsule)
     }
 }
 
@@ -597,7 +684,7 @@ extension ToolKind {
         case .highlighter: "Highlighter"
         case .eraser: "Eraser"
         case .lasso: "Lasso"
-        case .text: "Text and Images"
+        case .text: "Text"
         }
     }
 }

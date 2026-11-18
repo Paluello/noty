@@ -13,7 +13,7 @@
 | Gesto | Azione |
 |---|---|
 | 1 dito trascina | Scorre le pagine |
-| 2 dita pizzica | Zoom (fino al 500% della larghezza dello schermo) |
+| 2 dita pizzica | Zoom (dal 30% al 500% della larghezza dello schermo; sotto il 100% la pagina resta al centro) |
 | Tocco a 2 dita | Annulla |
 | Tocco a 3 dita | Ripeti |
 | Pressione prolungata su caselle di testo o immagini | Menu contestuale |

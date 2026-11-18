@@ -57,6 +57,9 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
     public var paper: PaperStyle
     /// Added in 0.3; missing in older notebooks, which are white.
     public var paperColor: PaperColor
+    /// Distance between lines, squares or dots, in page points; `nil` is the
+    /// default of the style. Added in 0.7.
+    public var paperSpacing: Double?
     public var orientation: PageOrientation
     public var pageIDs: [UUID]
     /// Opening needs Face ID or the passcode (DAT-7, ADR-0012). Added in 0.3.
@@ -70,6 +73,7 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
         cover: Cover = .randomColor(),
         paper: PaperStyle,
         paperColor: PaperColor = .white,
+        paperSpacing: Double? = nil,
         orientation: PageOrientation = .portrait,
         pageIDs: [UUID] = [UUID()],
         createdAt: Date = .now
@@ -80,6 +84,7 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
         self.cover = cover
         self.paper = paper
         self.paperColor = paperColor
+        self.paperSpacing = paperSpacing
         self.orientation = orientation
         self.pageIDs = pageIDs
         self.isLocked = false
@@ -88,7 +93,7 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case formatVersion, id, title, cover, paper, paperColor, orientation, pageIDs, isLocked, createdAt, modifiedAt
+        case formatVersion, id, title, cover, paper, paperColor, paperSpacing, orientation, pageIDs, isLocked, createdAt, modifiedAt
     }
 
     public init(from decoder: any Decoder) throws {
@@ -100,6 +105,7 @@ public struct NotebookManifest: Codable, Hashable, Sendable {
         paper = try container.decode(PaperStyle.self, forKey: .paper)
         // Optional fields keep notebooks from 0.1 and 0.2 readable.
         paperColor = try container.decodeIfPresent(PaperColor.self, forKey: .paperColor) ?? .white
+        paperSpacing = try container.decodeIfPresent(Double.self, forKey: .paperSpacing)
         orientation = try container.decode(PageOrientation.self, forKey: .orientation)
         pageIDs = try container.decode([UUID].self, forKey: .pageIDs)
         isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false

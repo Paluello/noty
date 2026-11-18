@@ -23,7 +23,7 @@ public enum PageRenderer {
         let rect = pageRect(manifest)
         context.setFillColor(manifest.paperColor.uiColor.cgColor)
         context.fill(rect)
-        PaperRenderer.draw(manifest.paper, in: rect, context: context, lineScale: lineScale)
+        PaperRenderer.draw(manifest.paper, in: rect, context: context, lineScale: lineScale, spacing: manifest.paperSpacing.map { CGFloat($0) })
         drawElements(of: pageID, in: package, context: context)
         let drawing = drawing(pageID, in: package)
         guard !drawing.strokes.isEmpty else { return }

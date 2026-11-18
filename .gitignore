@@ -6,3 +6,5 @@ DerivedData/
 *.xcuserstate
 build/
 dist/
+
+ExportOptions.plist

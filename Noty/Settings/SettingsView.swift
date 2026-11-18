@@ -1,4 +1,5 @@
 import NotyCanvas
+import NotyCore
 import SwiftUI
 
 /// Screen 6: app-wide preferences.
@@ -17,6 +18,10 @@ struct SettingsView: View {
     @State private var chosenFolder: URL?
     @State private var isExporting = false
     @State private var exportedArchive: SharedFile?
+    /// Spacing of new notebooks, in page points; 0 is the style's default.
+    @AppStorage(PaperSpacing.settingsKey(for: .lined)) private var linedSpacing = 0.0
+    @AppStorage(PaperSpacing.settingsKey(for: .grid)) private var gridSpacing = 0.0
+    @AppStorage(PaperSpacing.settingsKey(for: .dotted)) private var dottedSpacing = 0.0
 
     var body: some View {
         NavigationStack {
@@ -45,6 +50,21 @@ struct SettingsView: View {
                     Text("Writing")
                 } footer: {
                     Text("With finger drawing off, only Apple Pencil writes and fingers scroll and zoom. Writing near the bottom of the last page adds a new one. To draw a perfect line, circle or rectangle, hold the Pencil still at the end of the stroke.")
+                }
+
+                Section {
+                    ForEach([PaperStyle.lined, .grid, .dotted], id: \.self) { style in
+                        HStack(spacing: 16) {
+                            PaperPreview(style: style, spacing: defaultSpacingBinding(for: style).wrappedValue)
+                                .frame(width: 44)
+                            PaperSpacingSlider(style: style, spacing: defaultSpacingBinding(for: style))
+                        }
+                        .padding(.vertical, 4)
+                    }
+                } header: {
+                    Text("Paper")
+                } footer: {
+                    Text("New notebooks start with this spacing. Each notebook can change it from Paper in the editor menu.")
                 }
 
                 Section {
@@ -180,6 +200,19 @@ struct SettingsView: View {
                     Button("Done", systemImage: "checkmark", role: .confirm) { dismiss() }
                 }
             }
+        }
+    }
+
+    private func defaultSpacingBinding(for style: PaperStyle) -> Binding<Double?> {
+        let stored: Binding<Double> = switch style {
+        case .grid: $gridSpacing
+        case .dotted: $dottedSpacing
+        default: $linedSpacing
+        }
+        return Binding {
+            stored.wrappedValue > 0 ? stored.wrappedValue : nil
+        } set: { newValue in
+            stored.wrappedValue = newValue ?? 0
         }
     }
 

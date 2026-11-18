@@ -18,6 +18,8 @@ struct PaperPreview: View {
     let style: PaperStyle
     var orientation: PageOrientation = .portrait
     var color: PaperColor = .white
+    /// Distance between lines, squares or dots; `nil` is the style's default.
+    var spacing: Double?
 
     var body: some View {
         let size = PageGeometry.size(for: orientation)
@@ -31,7 +33,8 @@ struct PaperPreview: View {
                     style,
                     in: CGRect(x: 0, y: 0, width: size.width, height: size.height),
                     context: cg,
-                    lineScale: PaperRenderer.lineScale(forDrawingScale: scale)
+                    lineScale: PaperRenderer.lineScale(forDrawingScale: scale),
+                    spacing: spacing.map { CGFloat($0) }
                 )
             }
         }

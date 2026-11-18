@@ -190,6 +190,7 @@ public struct Library: Sendable {
         in parent: URL,
         paper: PaperStyle,
         paperColor: PaperColor = .white,
+        paperSpacing: Double? = nil,
         orientation: PageOrientation = .portrait,
         cover: Cover = .randomColor()
     ) throws -> NotebookPackage {
@@ -199,6 +200,7 @@ public struct Library: Sendable {
             cover: cover,
             paper: paper,
             paperColor: paperColor,
+            paperSpacing: paperSpacing,
             orientation: orientation
         )
         return try NotebookPackage.create(at: url, manifest: manifest)

@@ -84,6 +84,7 @@ struct PaletteListView: View {
     @Environment(PaletteStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var editing: ColorPalette?
+    @State private var deleting: ColorPalette?
 
     var body: some View {
         List {
@@ -108,7 +109,15 @@ struct PaletteListView: View {
                 .swipeActions {
                     if !palette.isStandard {
                         Button("Delete", systemImage: "trash", role: .destructive) {
-                            store.delete(palette)
+                            deleting = palette
+                        }
+                    }
+                }
+                .contextMenu {
+                    if !palette.isStandard {
+                        Button("Edit", systemImage: "pencil") { editing = palette }
+                        Button("Delete", systemImage: "trash", role: .destructive) {
+                            deleting = palette
                         }
                     }
                 }
@@ -126,6 +135,37 @@ struct PaletteListView: View {
         }
         .sheet(item: $editing) { palette in
             PaletteEditor(palette: palette)
+        }
+        .confirmPaletteDeletion($deleting)
+    }
+}
+
+extension View {
+    /// Asks before deleting a palette; the standard one can never be deleted.
+    func confirmPaletteDeletion(_ palette: Binding<ColorPalette?>, onDelete: @escaping () -> Void = {}) -> some View {
+        modifier(PaletteDeletionDialog(palette: palette, onDelete: onDelete))
+    }
+}
+
+private struct PaletteDeletionDialog: ViewModifier {
+    @Binding var palette: ColorPalette?
+    let onDelete: () -> Void
+    @Environment(PaletteStore.self) private var store
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(
+            Text("Delete “\(palette?.displayName ?? "")”?"),
+            isPresented: Binding(get: { palette != nil }, set: { if !$0 { palette = nil } }),
+            titleVisibility: .visible,
+            presenting: palette
+        ) { palette in
+            Button("Delete Palette", role: .destructive) {
+                store.delete(palette)
+                onDelete()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("Your writing keeps its colors. The Standard palette is used instead.")
         }
     }
 }
@@ -150,6 +190,7 @@ struct PaletteEditor: View {
     @Environment(PaletteStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var palette: ColorPalette
+    @State private var deleting: ColorPalette?
 
     init(palette: ColorPalette) {
         _palette = State(initialValue: palette)
@@ -168,7 +209,15 @@ struct PaletteEditor: View {
                         }
                     }
                 }
+                if !palette.isStandard {
+                    Section {
+                        Button("Delete Palette", systemImage: "trash", role: .destructive) {
+                            deleting = palette
+                        }
+                    }
+                }
             }
+            .confirmPaletteDeletion($deleting) { dismiss() }
             .navigationTitle(palette.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
