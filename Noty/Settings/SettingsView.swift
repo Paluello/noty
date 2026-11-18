@@ -118,6 +118,10 @@ struct SettingsView: View {
                     Text("Creates a zip with all your folders, every notebook and a PDF of each. Save it to Files, a NAS or another cloud as a backup.")
                 }
 
+                Section("App Icon") {
+                    AppIconPicker()
+                }
+
                 Section {
                     NavigationLink {
                         PaletteListView()

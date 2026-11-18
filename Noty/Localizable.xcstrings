@@ -121,6 +121,16 @@
         }
       }
     },
+    "App Icon": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icona dell'app"
+          }
+        }
+      }
+    },
     "Appearance": {
       "localizations": {
         "it": {
@@ -653,6 +663,16 @@
         }
       }
     },
+    "Ink": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inchiostro"
+          }
+        }
+      }
+    },
     "Insert Image": {
       "localizations": {
         "it": {
@@ -809,6 +829,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gestisci palette…"
+          }
+        }
+      }
+    },
+    "Margin": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Margine"
           }
         }
       }
@@ -1499,6 +1529,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Archiviazione"
+          }
+        }
+      }
+    },
+    "Stroke": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tratto"
           }
         }
       }
