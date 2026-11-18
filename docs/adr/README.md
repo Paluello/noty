@@ -18,7 +18,7 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0008](0008-input-pencil-dita.md) | Solo la Pencil disegna, le dita navigano | Accettato |
 | [0009](0009-sync-icloud-drive.md) | Sync tramite iCloud Drive, nessun server | Sostituito da ADR-0018 |
 | [0010](0010-audio.md) | Registrazione audio in background con sincronizzazione dei tratti | Accettato |
-| [0011](0011-licenza-gpl.md) | Licenza GPL-3.0-or-later e distribuzione tramite AltStore | Accettato |
+| [0011](0011-licenza-gpl.md) | Licenza GPL-3.0-or-later e distribuzione tramite AltStore | Sostituito in parte da ADR-0022 |
 | [0012](0012-blocco-face-id.md) | Blocco Face ID: protezione dell'accesso, non cifratura (v1) | Accettato |
 | [0013](0013-riconoscimento-forme.md) | Riconoscimento forme implementato in casa | Accettato |
 | [0014](0014-elementi-sovrapposti.md) | Testo e immagini come elementi separati dal disegno | Accettato |
@@ -29,3 +29,4 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0019](0019-ricerca-scrittura-vision.md) | Ricerca nella scrittura a mano con Vision, sul dispositivo | Accettato |
 | [0020](0020-tela-unica.md) | Un'unica tela PencilKit che scorre e zooma da sola | Accettato |
 | [0021](0021-barra-fissa-due-righe.md) | Barra dell'editor fissa in alto, su due righe | Accettato |
+| [0022](0022-eccezione-app-store.md) | Eccezione alla GPL per l'App Store | Accettato |

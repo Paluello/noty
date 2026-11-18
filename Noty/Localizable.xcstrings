@@ -421,6 +421,18 @@
         }
       }
     },
+    "Donations cover the cost of bringing Noty to the App Store.": {
+      "comment": "Footnote under the donation link, AltStore build only",
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le donazioni coprono il costo per portare Noty sull'App Store."
+          }
+        }
+      }
+    },
     "Done": {
       "localizations": {
         "it": {
@@ -1487,6 +1499,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Archiviazione"
+          }
+        }
+      }
+    },
+    "Support Noty": {
+      "comment": "Settings link to the donation page, AltStore build only",
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostieni Noty"
           }
         }
       }
