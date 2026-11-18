@@ -8,7 +8,7 @@ NotyApp (target iPad)          ── SwiftUI: Libreria, Impostazioni, routing, 
 ```
 
 ## Modello (NotyCore)
-- `Library`: radice (iCloud o locale), albero di `Folder` e `NotebookRef`, metadati di `.noty-library.json`
+- `Library`: radice in una cartella scelta dall'utente: sull'iPad, iCloud Drive o NAS (ADR-0018), albero di `Folder` e `NotebookRef`, metadati di `.noty-library.json`
 - `Notebook`: `id`, `title`, `paper` (stile, spaziatura, colore), `cover` (colore o immagine), `orientation`, `pages: [PageRef]`, `locked`, `formatVersion`
 - `Page`: `id`, `drawing: PKDrawing` (caricato su richiesta), `elements: [Element]`
 - `Recording`: `id`, `startDate`, `segments`, `markers`

@@ -1,45 +1,139 @@
-# Noty
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/icon-dark.png">
+    <img src="docs/images/icon.png" width="128" height="128" alt="Icona di Noty">
+  </picture>
+</p>
 
-App per prendere appunti a mano su iPad, **semplice, gratuita, senza pubblicità e open source**.
-Sito: **[noty.paluello.me](https://noty.paluello.me)**
-È pensata per lo studio: quaderni organizzati in cartelle, pagine stampabili e scrittura con Apple Pencil.
+<h1 align="center">Noty</h1>
 
-## Principi
-- **Semplice prima di tutto**: poche funzioni, fatte bene.
-- **Niente pubblicità, abbonamenti o limiti artificiali.**
-- **I tuoi dati sono tuoi**: file aperti e documentati, esportabili in PDF in qualsiasi momento.
-- **Nativa Apple**: SwiftUI + PencilKit, aspetto minimal coerente con iPadOS.
+<p align="center">
+  Appunti a mano su iPad, con Apple Pencil.<br>
+  Gratis per sempre: niente abbonamenti, pubblicità, account o limiti.
+</p>
 
-## Stato
-Versione 0.6, prima release per AltStore e SideStore: libreria, scrittura, forme, testo e immagini, registrazione delle lezioni, ricerca nella scrittura, esportazione. Mancano le prove complete su iPad vero. Vedi [roadmap](docs/roadmap.md).
+<p align="center">
+  <a href="https://noty.paluello.me/#installa"><b>⬇ Installa con AltStore o SideStore</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/Paluello/noty/releases/latest/download/Noty.ipa"><b>⬇ Scarica l'.ipa</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://noty.paluello.me"><b>🌐 noty.paluello.me</b></a>
+  <br>
+  <sub>Versione 0.6.0 · iPad con iPadOS 26 · gratuita e open source (GPL-3.0)</sub>
+  <br>
+  <sub>Sorgente AltStore / SideStore: <code>https://noty.paluello.me/altstore.json</code></sub>
+</p>
 
-## Documentazione
-| Documento | Contenuto |
-|---|---|
-| [Visione](docs/vision.md) | Per chi è, cosa fa e cosa non farà |
-| [Requisiti](docs/requirements.md) | Funzioni per versione, con priorità |
-| [UX: schermate](docs/ux/screens.md) | Struttura delle schermate |
-| [UX: flussi](docs/ux/flows.md) | Percorsi principali dell'utente |
-| [UX: gesti e input](docs/ux/gestures.md) | Pencil, dita, scorciatoie |
-| [Architettura](docs/architecture.md) | Moduli, dati, formato dei file |
-| [ADR](docs/adr/README.md) | Registro delle decisioni |
-| [Roadmap](docs/roadmap.md) | Milestone |
-| [Formato dei file](docs/file-format.md) | Com'è fatto un quaderno `.noty` |
-| [Domande aperte](docs/open-questions.md) | Cose ancora da decidere |
+<p align="center">
+  <img src="docs/images/libreria.webp" width="820" alt="La libreria di Noty su iPad, con cartelle e quaderni colorati, e due quaderni aperti sullo sfondo">
+</p>
 
-## Installazione
-- **AltStore / SideStore**: aggiungi la sorgente `https://noty.paluello.me/altstore.json` e ricevi gli aggiornamenti, oppure scarica l'`.ipa` allegato a ogni [release](https://github.com/paluello/noty/releases).
-- **App Store**: arriverà quando le donazioni ricorrenti copriranno i 99 € annui dell'Apple Developer Program ([ADR-0022](docs/adr/0022-eccezione-app-store.md)).
-- **Da sorgente**: apri `Noty.xcodeproj` con Xcode 26, scegli un iPad (o il simulatore) e premi Run. Test: `cd Packages/NotyKit && xcodebuild test -scheme NotyKit-Package -destination 'platform=iOS Simulator,name=<iPad>'`.
+Noty è un quaderno per Apple Pencil pensato per chi studia: apri e scrivi, registra la
+lezione, ritrova quello che hai scritto. Tutte le funzioni sono per tutti, senza
+scadenze, e i quaderni restano file tuoi, in un formato aperto e documentato.
 
-## Release
-Un tag `v*` (es. `git tag -a v0.6.0 -m "Noty 0.6" && git push origin v0.6.0`) avvia la Action `Release`: compila l'`.ipa` non firmato con il flag `ALTSTORE` e prepara una release in bozza. Scrivi le note e pubblicala; il sito la mostra al deploy successivo.
+## Funzioni
+
+### ✍️ Scrivi come su carta
+Penna, matita ed evidenziatore con la latenza nativa di Apple Pencil. Gomma parziale o a
+tratto intero, lazo, righello e palette da otto colori. Tieni fermo il tratto e una linea
+storta diventa dritta, un cerchio diventa un cerchio.
+
+- Pagine A4 stampabili: bianche, a righe, a quadretti o a puntini, con la distanza che preferisci
+- Caselle di testo con quattro grandezze ed elenchi puntati o numerati
+- Immagini da Foto o File e scansione di documenti
+- Le dita scorrono e zoomano, la Pencil scrive; zoom sempre nitido, fino al 30%
+- Barra in Liquid Glass che fluttua sopra la pagina, e una modalità concentrazione che la nasconde
+
+### 🎙️ Registra la lezione
+Avvia la registrazione e continua a scrivere. Riascoltando, l'inchiostro segue la voce;
+tocca un tratto e senti cosa si diceva in quel momento. La registrazione prosegue anche
+con l'iPad in standby.
+
+### 🔍 Ritrova quello che hai scritto
+Cerca una parola e Noty la trova anche nella tua calligrafia, in tutti i quaderni, e apre
+la pagina giusta. Il riconoscimento avviene sull'iPad: niente viene inviato altrove.
+
+### 🗂️ Organizza centinaia di pagine
+Cartelle e sottocartelle senza limiti, copertine colorate o con una tua foto, Preferiti e
+Recenti, ordinamento per cartella. Due quaderni affiancati con Split View e Stage Manager.
+
+### 📦 Porta via tutto, quando vuoi
+Esporta un quaderno in PDF oppure tutta la libreria in un unico archivio, con i PDF e i
+file originali. La libreria sta in una cartella che scegli tu: sull'iPad, su iCloud Drive
+o su un NAS.
+
+### 🔒 Privata per scelta
+Nessun account, nessuna pubblicità, nessun tracciamento. Puoi bloccare l'app intera o un
+singolo quaderno con Face ID.
+
+<p align="center">
+  <img src="docs/images/editor.webp" width="32%" alt="L'editor con la barra in vetro e appunti di analisi">
+  <img src="docs/images/audio.webp" width="32%" alt="Riascolto di una lezione registrata">
+  <img src="docs/images/ricerca.webp" width="32%" alt="Ricerca di una parola nella scrittura a mano">
+</p>
+
+## Installare
+
+### AltStore o SideStore (consigliato)
+Per ora Noty si installa fuori dall'App Store, gratis, con il tuo Apple ID.
+
+1. Installa [AltStore](https://altstore.io) o [SideStore](https://sidestore.io) sull'iPad.
+2. Aggiungi la sorgente di Noty, così ricevi gli aggiornamenti:
+   ```
+   https://noty.paluello.me/altstore.json
+   ```
+3. Installa Noty dalla sorgente. In alternativa scarica `Noty.ipa` dall'ultima
+   [release](https://github.com/Paluello/noty/releases/latest) e aprilo con AltStore.
+
+Con un Apple ID gratuito la firma dura 7 giorni: AltStore la rinnova da solo quando l'iPad
+è sulla stessa rete del computer con AltServer.
+
+### App Store
+Arriverà quando le donazioni ricorrenti copriranno i 99 € annui dell'Apple Developer
+Program ([ADR-0022](docs/adr/0022-eccezione-app-store.md)). Vedi [Sostieni](#sostieni).
+
+### Da sorgente
+Apri `Noty.xcodeproj` con Xcode 26, scegli un iPad o il simulatore e premi Run. I dettagli
+sono in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Sostieni
-Noty resterà sempre gratuita. Se vuoi contribuire alle spese (Apple Developer Program, dominio, server): [Open Collective](https://opencollective.com/paluello-me). Entrate e spese sono pubbliche.
+Noty resterà sempre gratuita. Se vuoi aiutare con le spese (Apple Developer Program,
+dominio, server) puoi donare su [Open Collective](https://opencollective.com/paluello-me):
+entrate e spese sono pubbliche.
+
+## Segnalare un problema o proporre un'idea
+- Qualcosa non funziona? Apri una [segnalazione di bug](https://github.com/Paluello/noty/issues/new?template=bug.md).
+- Hai un'idea? Apri una [proposta](https://github.com/Paluello/noty/issues/new?template=feature.md).
+  Prima dai un'occhiata alla [visione](docs/vision.md): Noty vuole restare semplice.
 
 ## Contribuire
-Leggi [CONTRIBUTING.md](CONTRIBUTING.md).
+Il codice è aperto e i contributi sono benvenuti: leggi [CONTRIBUTING.md](CONTRIBUTING.md).
+Per capire com'è fatta l'app c'è la [guida alla documentazione](docs/README.md).
 
-## Licenza
-GPL-3.0-or-later con un [permesso aggiuntivo per l'App Store](LICENSE-EXCEPTION.md). Vedi [ADR-0011](docs/adr/0011-licenza-gpl.md) e [ADR-0022](docs/adr/0022-eccezione-app-store.md).
+<details>
+<summary><b>In English</b></summary>
+
+**Noty** is a free, open source handwriting notes app for iPad and Apple Pencil, made for
+students. No subscriptions, ads, accounts or limits, ever.
+
+- Pencil-first writing with pen, pencil, highlighter, eraser, lasso, ruler and shape recognition
+- Printable A4 pages, text boxes, images and document scanning
+- Lecture recording synced with your ink: tap a stroke to hear what was being said
+- On-device handwriting search across all notebooks
+- Unlimited folders, favorites and recents, Split View and Stage Manager
+- PDF export and "export everything"; your library lives in a folder you choose (iPad, iCloud Drive, NAS) in an open, documented format
+
+**Install:** add the source `https://noty.paluello.me/altstore.json` to AltStore or
+SideStore, or download `Noty.ipa` from the [latest release](https://github.com/Paluello/noty/releases/latest).
+Requires iPadOS 26. The app is localized in English and Italian; project docs are in
+Italian for now and will be translated before 1.0 ([ADR-0015](docs/adr/0015-localizzazione-e-lingua-docs.md)).
+Code, issues and commits are in English. Support the project on
+[Open Collective](https://opencollective.com/paluello-me).
+
+</details>
+
+---
+
+Licenza [GPL-3.0-or-later](LICENSE) con un [permesso aggiuntivo per l'App Store](LICENSE-EXCEPTION.md)
+([ADR-0011](docs/adr/0011-licenza-gpl.md), [ADR-0022](docs/adr/0022-eccezione-app-store.md)).
