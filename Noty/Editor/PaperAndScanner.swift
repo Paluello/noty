@@ -40,7 +40,7 @@ struct PaperSheet: View {
                     Button("Cancel", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark", role: .confirm) {
+                    Button("Done", systemImage: "checkmark", role: .systemConfirm) {
                         model.setPaper(style, color: color, spacing: style == .blank ? nil : spacing)
                         dismiss()
                     }

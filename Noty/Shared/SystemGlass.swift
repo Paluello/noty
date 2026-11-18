@@ -88,3 +88,14 @@ struct SystemGlassContainer<Content: View>: View {
         }
     }
 }
+
+extension ButtonRole {
+    /// `.confirm` (the prominent glass checkmark) on iPadOS 26+; before,
+    /// no role: the toolbar's confirmation placement already makes it bold.
+    static var systemConfirm: ButtonRole? {
+        if #available(iOS 26, *) {
+            return .confirm
+        }
+        return nil
+    }
+}

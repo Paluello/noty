@@ -64,7 +64,7 @@ struct NewNotebookSheet: View {
                     Button("Cancel", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create", systemImage: "checkmark", role: .confirm) { create() }
+                    Button("Create", systemImage: "checkmark", role: .systemConfirm) { create() }
                 }
             }
             .onChange(of: paper) { _, newPaper in
@@ -128,7 +128,7 @@ struct CoverSheet: View {
                     Button("Cancel", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark", role: .confirm) {
+                    Button("Done", systemImage: "checkmark", role: .systemConfirm) {
                         store.setCover(cover, of: notebookURL)
                         dismiss()
                     }

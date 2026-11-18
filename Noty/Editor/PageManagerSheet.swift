@@ -39,7 +39,7 @@ struct PageManagerSheet: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark", role: .confirm) { dismiss() }
+                    Button("Done", systemImage: "checkmark", role: .systemConfirm) { dismiss() }
                 }
             }
             .confirmationDialog(
