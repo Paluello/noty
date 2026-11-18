@@ -54,7 +54,7 @@ struct CoverView: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+                        .systemGlass(.regular, in: .rect(cornerRadius: 12))
                         .padding(10)
                         .padding(.leading, 8)
                 }
@@ -149,7 +149,7 @@ struct CoverChooser: View {
                     Label("File", systemImage: "folder")
                 }
             }
-            .buttonStyle(.glass)
+            .systemGlassButtonStyle()
         }
         .onChange(of: photoItem) { _, item in
             guard let item else { return }

@@ -45,6 +45,24 @@ jobs:
             -destination "id=${{ steps.sim.outputs.udid }}" \
             | xcbeautify
 
+      - name: Test NotyKit on iPadOS 18 (the oldest supported, ADR-0024)
+        run: |
+          # The first iPad of the newest iOS 18 runtime on the runner, if any.
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          runtimes = sorted((r for r in devices if ".iOS-18-" in r), key=lambda r: [int(x) for x in r.split("iOS-")[1].split("-")])
+          ipads = [d for r in reversed(runtimes) for d in devices[r] if d["name"].startswith("iPad")]
+          print(ipads[0]["udid"] if ipads else "")
+          ')
+          if [ -z "$UDID" ]; then
+            echo "::warning::No iPadOS 18 simulator on this runner; skipped the iPadOS 18 test run."
+            exit 0
+          fi
+          echo "Using iPadOS 18 simulator $UDID"
+          cd Packages/NotyKit
+          xcodebuild test -scheme NotyKit-Package -destination "id=$UDID" | xcbeautify
+
       - name: Build the app
         run: |
           xcodebuild build -project Noty.xcodeproj -scheme Noty \

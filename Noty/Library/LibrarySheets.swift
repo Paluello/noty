@@ -31,7 +31,7 @@ struct NewNotebookSheet: View {
                     TextField("Notebook name", text: $title, prompt: Text(defaultTitle))
                         .font(.title3)
                         .padding(14)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                        .systemGlass(.regular, in: .rect(cornerRadius: 16))
 
                     section("Paper") {
                         VStack(alignment: .leading, spacing: 16) {
@@ -64,7 +64,7 @@ struct NewNotebookSheet: View {
                     Button("Cancel", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create", systemImage: "checkmark", role: .confirm) { create() }
+                    Button("Create", systemImage: "checkmark", role: .systemConfirm) { create() }
                 }
             }
             .onChange(of: paper) { _, newPaper in
@@ -128,7 +128,7 @@ struct CoverSheet: View {
                     Button("Cancel", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark", role: .confirm) {
+                    Button("Done", systemImage: "checkmark", role: .systemConfirm) {
                         store.setCover(cover, of: notebookURL)
                         dismiss()
                     }
@@ -214,7 +214,7 @@ struct TrashView: View {
                     Button("Restore") {
                         store.restore(trashed)
                     }
-                    .buttonStyle(.glass)
+                    .systemGlassButtonStyle()
                 }
                 .swipeActions {
                     Button("Delete", systemImage: "trash", role: .destructive) {
@@ -241,7 +241,7 @@ struct TrashView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .glassEffect(.regular, in: .capsule)
+                    .systemGlass(.regular, in: .capsule)
                     .padding(.bottom, 8)
             }
         }

@@ -197,7 +197,7 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark", role: .confirm) { dismiss() }
+                    Button("Done", systemImage: "checkmark", role: .systemConfirm) { dismiss() }
                 }
             }
         }

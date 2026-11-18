@@ -59,51 +59,52 @@ struct FolderGridView: View {
     var body: some View {
         let items = items
         let contentMatches = isSearching ? store.searchHandwriting(query).filter { match in !items.contains(match.entry) } : []
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 36) {
-                ForEach(items) { item in
-                    tile(for: item)
-                        .contextMenu { menu(for: item) }
+        withToolbar(
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 36) {
+                    ForEach(items) { item in
+                        tile(for: item)
+                            .contextMenu { menu(for: item) }
+                    }
                 }
-            }
-            .padding(32)
+                .padding(32)
 
-            if !contentMatches.isEmpty {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("In Handwriting")
-                        .font(.title3.bold())
-                        .padding(.horizontal, 32)
-                    LazyVGrid(columns: columns, spacing: 36) {
-                        ForEach(contentMatches, id: \.entry) { match in
-                            if case .notebook(let url, let manifest) = match.entry {
-                                Button {
-                                    openNotebookAtPage(url, match.pages[0])
-                                } label: {
-                                    VStack(spacing: 6) {
-                                        NotebookTile(url: url, manifest: manifest, isFavorite: store.isFavorite(match.entry), location: store.location(of: match.entry))
-                                        Text("Page \(match.pages.map { String($0 + 1) }.formatted(.list(type: .and)))")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.tint)
+                if !contentMatches.isEmpty {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("In Handwriting")
+                            .font(.title3.bold())
+                            .padding(.horizontal, 32)
+                        LazyVGrid(columns: columns, spacing: 36) {
+                            ForEach(contentMatches, id: \.entry) { match in
+                                if case .notebook(let url, let manifest) = match.entry {
+                                    Button {
+                                        openNotebookAtPage(url, match.pages[0])
+                                    } label: {
+                                        VStack(spacing: 6) {
+                                            NotebookTile(url: url, manifest: manifest, isFavorite: store.isFavorite(match.entry), location: store.location(of: match.entry))
+                                            Text("Page \(match.pages.map { String($0 + 1) }.formatted(.list(type: .and)))")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.tint)
+                                        }
                                     }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
+                        .padding(.horizontal, 32)
                     }
-                    .padding(.horizontal, 32)
+                    .padding(.bottom, 32)
                 }
-                .padding(.bottom, 32)
             }
-        }
-        .background { AmbientBackground() }
-        .overlay {
-            if items.isEmpty && contentMatches.isEmpty {
-                emptyState
+            .background { AmbientBackground() }
+            .overlay {
+                if items.isEmpty && contentMatches.isEmpty {
+                    emptyState
+                }
             }
-        }
-        .navigationTitle(title)
-        .modifier(SearchField(isEnabled: source == .search, query: $query))
-        .toolbar { toolbar }
+            .navigationTitle(title)
+            .modifier(SearchField(isEnabled: source == .search, query: $query))
+        )
         .sheet(isPresented: $isCreatingNotebook) {
             NewNotebookSheet(folder: folder ?? store.root) { package in
                 openNotebook(package.url)
@@ -238,8 +239,30 @@ struct FolderGridView: View {
 
     // MARK: - Chrome
 
+    /// On iPadOS 26 a fixed spacer gives the New menu its own glass;
+    /// `ToolbarSpacer` doesn't exist before, so the bar is built twice (ADR-0024).
+    @ViewBuilder
+    private func withToolbar(_ content: some View) -> some View {
+        if #available(iOS 26, *) {
+            content.toolbar {
+                settingsAndSortItems
+                if folder != nil {
+                    ToolbarSpacer(.fixed, placement: .primaryAction)
+                    newItem
+                }
+            }
+        } else {
+            content.toolbar {
+                settingsAndSortItems
+                if folder != nil {
+                    newItem
+                }
+            }
+        }
+    }
+
     @ToolbarContentBuilder
-    private var toolbar: some ToolbarContent {
+    private var settingsAndSortItems: some ToolbarContent {
         if path.isEmpty {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Settings", systemImage: "gearshape", action: showSettings)
@@ -258,22 +281,22 @@ struct FolderGridView: View {
                 }
             }
         }
-        if folder != nil {
-            ToolbarSpacer(.fixed, placement: .primaryAction)
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button("New Notebook", systemImage: "book.closed") {
-                        isCreatingNotebook = true
-                    }
-                    Button("New Folder", systemImage: "folder.badge.plus") {
-                        newFolderName = ""
-                        isCreatingFolder = true
-                    }
-                } label: {
-                    Label("New", systemImage: "plus")
+    }
+
+    private var newItem: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Button("New Notebook", systemImage: "book.closed") {
+                    isCreatingNotebook = true
                 }
-                .buttonStyle(.glassProminent)
+                Button("New Folder", systemImage: "folder.badge.plus") {
+                    newFolderName = ""
+                    isCreatingFolder = true
+                }
+            } label: {
+                Label("New", systemImage: "plus")
             }
+            .systemGlassButtonStyle(prominent: true)
         }
     }
 
@@ -292,7 +315,7 @@ struct FolderGridView: View {
                     Button("New Notebook") {
                         isCreatingNotebook = true
                     }
-                    .buttonStyle(.glassProminent)
+                    .systemGlassButtonStyle(prominent: true)
                 }
             case .favorites:
                 ContentUnavailableView("No Favorites", systemImage: "star", description: Text("Touch and hold a notebook, then choose Add to Favorites."))
@@ -329,7 +352,7 @@ struct NotebookTile: View {
                         Image(systemName: "lock.fill")
                             .font(.footnote)
                             .frame(width: 30, height: 30)
-                            .glassEffect(.regular, in: .circle)
+                            .systemGlass(.regular, in: .circle)
                             .padding(8)
                             .padding(.leading, 10)
                             .accessibilityLabel(Text("Locked"))
@@ -341,7 +364,7 @@ struct NotebookTile: View {
                             .font(.footnote)
                             .foregroundStyle(.yellow)
                             .frame(width: 30, height: 30)
-                            .glassEffect(.regular, in: .circle)
+                            .systemGlass(.regular, in: .circle)
                             .padding(8)
                     }
                 }
@@ -387,7 +410,7 @@ struct FolderTile: View {
                             .padding(.horizontal, 14)
                     }
                 }
-                .glassEffect(.regular.tint(Color.accentColor.opacity(0.1)), in: .rect(cornerRadius: 22))
+                .systemGlass(.regular.tint(Color.accentColor.opacity(0.1)), in: .rect(cornerRadius: 22))
 
             VStack(spacing: 2) {
                 if let location {

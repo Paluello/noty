@@ -58,7 +58,7 @@ struct AppLockGate<Content: View>: View {
                 Button("Unlock", systemImage: "faceid") {
                     Task { await unlock() }
                 }
-                .buttonStyle(.glassProminent)
+                .systemGlassButtonStyle(prominent: true)
                 .controlSize(.large)
             }
         }

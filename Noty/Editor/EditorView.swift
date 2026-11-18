@@ -73,7 +73,7 @@ struct EditorView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .glassEffect(.regular, in: .capsule)
+                    .systemGlass(.regular, in: .capsule)
                     .padding(16)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
@@ -88,7 +88,7 @@ struct EditorView: View {
                 .font(.title3)
                 .frame(width: 48, height: 48)
                 .contentShape(.circle)
-                .glassEffect(.regular.interactive(), in: .circle)
+                .systemGlass(.regular.interactive(), in: .circle)
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .transition(.opacity)
@@ -261,7 +261,7 @@ struct EditorToolbar: View {
     @State private var isEditingWidth = false
 
     var body: some View {
-        GlassEffectContainer(spacing: Self.rowSpacing) {
+        SystemGlassContainer(spacing: Self.rowSpacing) {
             VStack(spacing: Self.rowSpacing) {
                 // Narrow windows first drop the title, then let the tools scroll.
                 ViewThatFits(in: .horizontal) {
@@ -587,7 +587,8 @@ struct BarButton: View {
 }
 
 /// Bar buttons react on the whole target and show clearly which one is on,
-/// with the system's Liquid Glass only: no painted fills or materials.
+/// with the system's Liquid Glass only: no painted fills or materials
+/// (on iPadOS 18, the system's own look instead; ADR-0024).
 struct BarButtonStyle: ButtonStyle {
     /// Accent-tinted glass: the current tool.
     var isSelected = false
@@ -598,11 +599,11 @@ struct BarButtonStyle: ButtonStyle {
         configuration.label
             .foregroundStyle(isSelected ? AnyShapeStyle(Color.white) : AnyShapeStyle(.foreground))
             .contentShape(.capsule)
-            .glassEffect(glass, in: .capsule)
+            .systemGlass(glass, in: .capsule)
             .opacity(configuration.isPressed ? 0.75 : 1)
     }
 
-    private var glass: Glass {
+    private var glass: SystemGlass {
         if isSelected { return .regular.tint(.accentColor).interactive() }
         if isHighlighted { return .regular.tint(.accentColor.opacity(0.25)).interactive() }
         return .identity
@@ -613,7 +614,7 @@ extension View {
     /// One group of the editor bar: a Liquid Glass capsule, like the library's.
     func glassCapsule() -> some View {
         padding(3)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .systemGlass(.regular.interactive(), in: .capsule)
     }
 }
 

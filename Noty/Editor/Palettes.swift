@@ -101,7 +101,7 @@ struct PaletteListView: View {
                     Spacer()
                     if !palette.isStandard {
                         Button("Edit") { editing = palette }
-                            .buttonStyle(.glass)
+                            .systemGlassButtonStyle()
                     }
                 }
                 .contentShape(.rect)
@@ -225,7 +225,7 @@ struct PaletteEditor: View {
                     Button("Cancel", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", systemImage: "checkmark", role: .confirm) {
+                    Button("Done", systemImage: "checkmark", role: .systemConfirm) {
                         store.update(palette)
                         dismiss()
                     }

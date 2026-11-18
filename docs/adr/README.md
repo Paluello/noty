@@ -10,7 +10,7 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0000](0000-template.md) | Template | — |
 | [0001](0001-registrare-le-decisioni.md) | Registrare le decisioni architetturali | Accettato |
 | [0002](0002-swiftui-pencilkit.md) | App nativa con SwiftUI + PencilKit | Accettato |
-| [0003](0003-ipados-minimo.md) | Supporto solo per l'ultima versione maggiore di iPadOS | Accettato |
+| [0003](0003-ipados-minimo.md) | Supporto solo per l'ultima versione maggiore di iPadOS | Sostituito da ADR-0024 |
 | [0004](0004-formato-file.md) | Formato del quaderno: pacchetto aperto su file system | Accettato |
 | [0005](0005-filesystem-fonte-di-verita.md) | Il file system è la fonte di verità, l'indice è solo una cache | Accettato |
 | [0006](0006-pagine-fisse.md) | Pagine a dimensione fissa con sfondo separato | Accettato |
@@ -31,3 +31,4 @@ Stati: `Proposto` · `Accettato` · `Sostituito da ADR-XXXX` · `Respinto`
 | [0021](0021-barra-fissa-due-righe.md) | Barra dell'editor fissa in alto, su due righe | Accettato |
 | [0022](0022-eccezione-app-store.md) | Eccezione alla GPL per l'App Store | Accettato |
 | [0023](0023-barra-in-vetro-flottante.md) | Barra dell'editor in capsule di vetro, flottanti sopra la pagina | Accettato |
+| [0024](0024-ipados-18.md) | iPadOS 18 come versione minima, Liquid Glass da iPadOS 26 | Accettato |
