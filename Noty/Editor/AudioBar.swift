@@ -16,7 +16,7 @@ struct AudioBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .systemGlass(.regular.interactive(), in: .capsule)
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 

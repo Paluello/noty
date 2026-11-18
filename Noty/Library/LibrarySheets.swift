@@ -31,7 +31,7 @@ struct NewNotebookSheet: View {
                     TextField("Notebook name", text: $title, prompt: Text(defaultTitle))
                         .font(.title3)
                         .padding(14)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                        .systemGlass(.regular, in: .rect(cornerRadius: 16))
 
                     section("Paper") {
                         VStack(alignment: .leading, spacing: 16) {
@@ -214,7 +214,7 @@ struct TrashView: View {
                     Button("Restore") {
                         store.restore(trashed)
                     }
-                    .buttonStyle(.glass)
+                    .systemGlassButtonStyle()
                 }
                 .swipeActions {
                     Button("Delete", systemImage: "trash", role: .destructive) {
@@ -241,7 +241,7 @@ struct TrashView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .glassEffect(.regular, in: .capsule)
+                    .systemGlass(.regular, in: .capsule)
                     .padding(.bottom, 8)
             }
         }

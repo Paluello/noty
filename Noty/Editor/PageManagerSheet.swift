@@ -71,7 +71,7 @@ struct PageManagerSheet: View {
                     .font(.callout.monospacedDigit())
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
-                    .glassEffect(model.currentPage == index + 1 ? .regular.tint(.accentColor.opacity(0.3)) : .regular, in: .capsule)
+                    .systemGlass(model.currentPage == index + 1 ? .regular.tint(.accentColor.opacity(0.3)) : .regular, in: .capsule)
             }
         }
         .buttonStyle(.plain)

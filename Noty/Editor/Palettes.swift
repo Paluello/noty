@@ -101,7 +101,7 @@ struct PaletteListView: View {
                     Spacer()
                     if !palette.isStandard {
                         Button("Edit") { editing = palette }
-                            .buttonStyle(.glass)
+                            .systemGlassButtonStyle()
                     }
                 }
                 .contentShape(.rect)

@@ -19,7 +19,7 @@
   &nbsp;·&nbsp;
   <a href="https://noty.paluello.me"><b>🌐 noty.paluello.me</b></a>
   <br>
-  <sub>Versione 0.6.0 · iPad con iPadOS 26 · gratuita e open source (GPL-3.0)</sub>
+  <sub>Versione 0.6.0 · iPad con iPadOS 18 o successivo · gratuita e open source (GPL-3.0)</sub>
   <br>
   <sub>Sorgente AltStore / SideStore: <code>https://noty.paluello.me/altstore.json</code></sub>
 </p>
@@ -126,7 +126,7 @@ students. No subscriptions, ads, accounts or limits, ever.
 
 **Install:** add the source `https://noty.paluello.me/altstore.json` to AltStore or
 SideStore, or download `Noty.ipa` from the [latest release](https://github.com/Paluello/noty/releases/latest).
-Requires iPadOS 26. The app is localized in English and Italian; project docs are in
+Requires iPadOS 18 or later (Liquid Glass on iPadOS 26 and later). The app is localized in English and Italian; project docs are in
 Italian for now and will be translated before 1.0 ([ADR-0015](docs/adr/0015-localizzazione-e-lingua-docs.md)).
 Code, issues and commits are in English. Support the project on
 [Open Collective](https://opencollective.com/paluello-me).

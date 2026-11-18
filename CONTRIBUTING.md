@@ -9,7 +9,7 @@ Grazie! Prima di iniziare:
 La [guida alla documentazione](docs/README.md) spiega com'è fatto il progetto.
 
 ## Setup
-- macOS recente con **Xcode 26** (l'app richiede iPadOS 26, [ADR-0003](docs/adr/0003-ipados-minimo.md))
+- macOS recente con **Xcode 26** (l'app funziona da iPadOS 18, con il Liquid Glass da iPadOS 26: [ADR-0024](docs/adr/0024-ipados-18.md))
 - `git clone https://github.com/Paluello/noty.git`, apri `Noty.xcodeproj`, scheme `Noty`, scegli un iPad o il simulatore e premi Run
 - Codice: `Packages/NotyKit` (`NotyCore` dati e formato, `NotyCanvas` editor) e `Noty/` (interfaccia SwiftUI)
 - Le stringhe dell'interfaccia stanno in `Noty/Localizable.xcstrings`
@@ -25,7 +25,8 @@ La CI (`.github/workflows/tests.yml`) compila l'app ed esegue i test a ogni push
 - Codice, commenti, issue e commit in inglese; stile Swift API Design Guidelines, `swift-format`
 - Test per tutto ciò che riguarda `NotyCore` (soprattutto il formato dei file: **mai perdere dati**)
 - Le stringhe UI vanno nel String Catalog, sempre con la traduzione italiana
-- Nell'interfaccia si usa solo il Liquid Glass di sistema (`glassEffect`, `GlassEffectContainer`, stili `.glass`): niente imitazioni con materiali, sfocature o riempimenti dipinti ([ADR-0023](docs/adr/0023-barra-in-vetro-flottante.md))
+- Nell'interfaccia si usa solo il Liquid Glass di sistema, sempre tramite `systemGlass(_:in:)`, `systemGlassButtonStyle(prominent:)` e `SystemGlassContainer` (`Noty/Shared/SystemGlass.swift`): niente imitazioni con materiali, sfocature o riempimenti dipinti ([ADR-0023](docs/adr/0023-barra-in-vetro-flottante.md)). Su iPadOS 18 questi helper mostrano l'aspetto di sistema di quella versione ([ADR-0024](docs/adr/0024-ipados-18.md))
+- Le API più recenti di iPadOS 18 vanno dentro `if #available`, con un ripiego; le modifiche UI si provano anche su un simulatore con iPadOS 18
 - Commit firmati DCO: `git commit -s`. Contribuendo accetti che il tuo codice sia distribuito sotto GPL-3.0-or-later con il permesso aggiuntivo per l'App Store ([LICENSE-EXCEPTION.md](LICENSE-EXCEPTION.md), [ADR-0022](docs/adr/0022-eccezione-app-store.md))
 - Una PR = una modifica; screenshot o video per le modifiche UI
 
