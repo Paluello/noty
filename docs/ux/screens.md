@@ -13,7 +13,7 @@ Come Apple Music su iPadOS 26: una **barra delle sezioni in vetro**, in alto al 
  Lingue  Uni…  Analisi Fisica
 ```
 - **Barra in alto:** Libreria, Preferiti, Recenti e Cerca (la ricerca sta nella barra, come in Music).
-- **Barra laterale** (pulsante ▯): in più le **Cartelle** di primo livello e il **Cestino**, con **Impostazioni** in fondo.
+- **Barra laterale** (pulsante ▯): in più le **Cartelle** di primo livello e il **Cestino**. Le **Impostazioni** si aprono dall'ingranaggio in alto a sinistra.
 - La **griglia** mostra prima le cartelle e poi i quaderni; ogni quaderno mostra la sua copertina (colore o immagine) con il titolo.
 - **Pressione prolungata** su un elemento: Apri in una nuova finestra, Preferito, Blocca, Rinomina, Copertina, Sposta, Duplica, Esporta PDF, Elimina.
 - **Trascina e rilascia** un quaderno su una cartella della griglia per spostarlo.
