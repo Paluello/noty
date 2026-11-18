@@ -64,13 +64,6 @@ struct LibraryView: View {
                 .font(.largeTitle.bold())
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .tabViewSidebarBottomBar {
-            Button("Settings", systemImage: "gearshape") {
-                isShowingSettings = true
-            }
-            .buttonStyle(.glass)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
         .onChange(of: tab) { path = [] }
         .environment(\.showSettings) { isShowingSettings = true }
         .environment(\.openNotebook) { url in open(url, inNewWindow: false) }
