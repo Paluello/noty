@@ -28,16 +28,21 @@ Come Apple Music su iPadOS 26: una **barra delle sezioni in vetro**, in alto al 
 
 ## 3. Editor del quaderno
 ```
-┌──────────────────────────────────────────────────────────┐
-│ ‹ Libreria  Analisi 1   ✎ ✏ ▮ ⌫ ◌ 📏 T 🖼 │●●●●●●●●│ ↶ ↷ ⋯ │
-├──────────────────────────────────────────────────────────┤
-│                 ┌────────────────────┐                    │
-│                 │  pagina 3          │                    │
-│                 │                    │          3 / 12    │
-│                 └────────────────────┘                    │
-└──────────────────────────────────────────────────────────┘
+ ╭────────────────╮   ╭──────────────────╮   ╭───────────╮
+ │ ‹ Analisi 3/12 │   │ ✎ ✏ ▮ ⌫ ◌ Aa │   │ ↶ ↷ 🎙 ⋯ │
+ ╰────────────────╯   ╰──────────────────╯   ╰───────────╯
+              ╭──────────────────────────────╮
+              │ · • ● │ ●●●●●●●● │ 📏 │
+              ╰──────────────────────────────╯
+ ┌──────────────────────────────────────────────────────┐
+ │  pagina 3                                            │
+ │                                              ╭──────╮│
+ │                                              │ 3/12 ││
+ └──────────────────────────────────────────────╰──────╯┘
 ```
-- **Barra fissa in alto, su due righe** (ADR-0021). Riga 1: indietro, titolo e pagina "3 / 12" (apre le pagine), strumenti, annulla/ripeti, registra, menu "⋯". Riga 2: le opzioni dello strumento attivo, sempre visibili (3 spessori, 8 colori, righello; tipo di gomma; immagini per il testo).
+- **Capsule in vetro flottanti in alto** (ADR-0022), come la barra della libreria. Sopra: indietro, titolo e pagina "3 / 12" (apre le pagine) · strumenti · annulla/ripeti, registra, menu "⋯". Sotto, al centro: le opzioni dello strumento attivo, sempre visibili (3 spessori, 8 colori, righello; tipo di gomma; immagini per il testo).
+- In cima al quaderno la prima pagina parte **sotto** le capsule; scorrendo, le pagine passano sotto il vetro.
+- In basso a destra un piccolo indicatore "3 / 12" (solo lettura).
 - Tocca lo spessore già selezionato per regolarlo; tieni premuto sui colori per cambiare palette.
 - Le pagine scorrono **in verticale**, attaccate una all'altra e larghe quanto lo schermo, separate da una riga sottile; zoom con due dita, sempre nitido (ADR-0020).
 - In fondo all'ultima pagina c'è "＋ Nuova pagina"; quando scrivi nella parte bassa dell'ultima pagina, ne viene aggiunta una nuova in automatico (si può disattivare nelle impostazioni).
